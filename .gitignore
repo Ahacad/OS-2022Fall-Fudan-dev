@@ -5,7 +5,9 @@
 *.o
 *.ko
 *.obj
-*.elf
+kernel8.*
+*.img
+build/
 
 # Linker output
 *.ilk
@@ -50,3 +52,17 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Local files
+.gdb_history
+.vscode/
+.cache/
+.mypy_cache/
+
+# CMake output
+compile_flags.txt
+compile_commands.json
+CMakeFiles/
+cmake_install.cmake
+CMakeCache.txt
+Makefile
