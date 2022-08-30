@@ -8,9 +8,11 @@ SECTIONS
     PROVIDE(etext = .);
     .init : { 
         PROVIDE(early_init = .);
-        *(.init.early.*)
+        *(.init.early)
+        PROVIDE(rest_init = .);
+        *(.init.rest)
         PROVIDE(init = .);
-        *(.init.*)
+        *(.init)
         PROVIDE(einit = .);
     }
     .rodata : { *(.rodata) }
