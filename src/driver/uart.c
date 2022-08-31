@@ -51,3 +51,5 @@ void uart_put_char(char c) {
     if (c == '\n')
         uart_put_char('\r');
 }
+
+__attribute__((weak, alias("uart_put_char"))) void putch(char);

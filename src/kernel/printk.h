@@ -1,7 +1,6 @@
 #pragma once
 
-#include <driver/uart.h>
+// Should be provided by drivers. By default, putch = uart_put_char.
+extern void putch(char);
 
-#define putchar uart_put_char
-void printk(const char *fmt, ...);
-
+void printk(const char*, ...);

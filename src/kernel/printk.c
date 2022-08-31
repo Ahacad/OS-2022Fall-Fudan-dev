@@ -14,7 +14,7 @@ early_init_func(init_printk);
 
 static void _put_char(void *_ctx, char c) {
     (void)_ctx;
-    putchar(c);
+    putch(c);
 }
 
 static void _vprintf(const char *fmt, va_list arg) {

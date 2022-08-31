@@ -6,7 +6,7 @@
 #define false 0
 #define TRUE true
 #define FALSE false
-#define NULL 0
+// #define NULL 0
 
 typedef char bool;
 typedef signed char i8;
