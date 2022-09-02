@@ -40,8 +40,7 @@ ListNode *_detach_from_list(ListNode *node) {
 
     if (prev == node)
         return NULL;
-    else
-        return prev;
+    return prev;
 }
 
 
@@ -56,7 +55,7 @@ QueueNode* fetch_from_queue(QueueNode** head) {
     QueueNode* node;
     do
         node = *head;
-    while (!__atomic_compare_exchange_n(head, &node->next, node, true, __ATOMIC_ACQ_REL, __ATOMIC_RELAXED));
+    while (node && !__atomic_compare_exchange_n(head, &node, node->next, true, __ATOMIC_ACQ_REL, __ATOMIC_RELAXED));
     return node;
 }
 

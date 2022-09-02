@@ -1,10 +1,7 @@
 #include <kernel/init.h>
 #include <kernel/printk.h>
 
-void early_init();
-void rest_init();
-void init();
-void einit();
+extern char early_init[], rest_init[], init[], einit[];
 
 void do_early_init()
 {
