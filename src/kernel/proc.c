@@ -2,16 +2,34 @@
 #include <kernel/init.h>
 #include <kernel/mem.h>
 #include <kernel/sched.h>
+#include <common/list.h>
+#include <kernel/printk.h>
 
-static SpinLock proc_list_lock;
-static int maxpid;
+SpinLock proc_list_lock;
 struct proc root_proc;
+static SpinLock max_pid_lock;
+static int max_pid;
 
 void kernel_entry();
 
-static void kernel_proc_entry(void(*entry)(u64), u64 arg)
+static NO_RETURN void proc_entry(void(*entry)(u64), u64 arg)
 {
+    _release_spinlock(&proc_list_lock);
+    entry(arg);
+    // exit
+    while (1);
+}
 
+void start_proc(struct proc* p, void(*entry)(u64), u64 arg)
+{
+    setup_checker(0);
+    p->kcontext->lr = (u64)&proc_entry;
+    p->kcontext->x0 = (u64)entry;
+    p->kcontext->x1 = (u64)arg;
+    p->state = RUNNABLE;
+    acquire_spinlock(0, &proc_list_lock);
+    _insert_into_list(&root_proc.list, &p->list);
+    release_spinlock(0, &proc_list_lock);
 }
 
 void init_proc(struct proc* p)
@@ -21,18 +39,9 @@ void init_proc(struct proc* p)
     p->kstack = kalloc_page();
     p->kcontext = (KernelContext*)((u64)p->kstack + PAGE_SIZE - 16 - sizeof(KernelContext));
     p->ucontext = NULL;
-    acquire_spinlock(0, &proc_list_lock);
-    p->pid = ++maxpid;
-    _insert_into_list(&root_proc.list, &p->list);
-    release_spinlock(0, &proc_list_lock);
-}
-
-void update_proc_state(struct proc* proc, enum procstate state)
-{
-    setup_checker(0);
-    acquire_spinlock(0, &proc_list_lock);
-    proc->state = state;
-    release_spinlock(0, &proc_list_lock);
+    acquire_spinlock(0, &max_pid_lock);
+    p->pid = ++max_pid;
+    release_spinlock(0, &max_pid_lock);
 }
 
 static void init_proc_list()
@@ -48,7 +57,6 @@ early_init_func(init_proc_list);
 static void init_root_proc()
 {
     init_proc(&root_proc);
-    root_proc.kcontext->lr = (u64)kernel_entry;
-    root_proc.state = RUNNABLE;
+    start_proc(&root_proc, kernel_entry, 123456);
 }
 init_func(init_root_proc);

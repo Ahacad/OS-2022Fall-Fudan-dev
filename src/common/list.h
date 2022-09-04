@@ -22,6 +22,10 @@ ListNode *_merge_list(ListNode *node1, ListNode *node2);
 // node list. It usually returns `node->prev`. If `node` is
 // the last one in the list, it will return NULL.
 ListNode *_detach_from_list(ListNode *node);
+// - walk through the list
+#define _for_in_list(valptr, list) for (ListNode *__flag = (list), *valptr = __flag; \
+    __flag; __flag = (valptr = valptr->next) == __flag ? (void*)0 : __flag)
+
 
 // * List operations with locks
 #define merge_list(checker, lock, node1, node2) ({ \

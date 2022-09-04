@@ -3,7 +3,7 @@
 #include <common/defines.h>
 #include <common/list.h>
 
-enum procstate { UNUSED, IDLE, SLEEPING, RUNNABLE, RUNNING };
+enum procstate { UNUSED, IDLE, RUNNABLE, RUNNING };
 
 typedef struct UserContext
 {
@@ -32,4 +32,4 @@ struct proc
 };
 
 void init_proc(struct proc*);
-void update_proc_state(struct proc*, enum procstate);
+void start_proc(struct proc*, void(*entry)(u64), u64 arg);

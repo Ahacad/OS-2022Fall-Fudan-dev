@@ -12,3 +12,6 @@ struct cpu
 
 extern struct cpu cpus[NCPU];
 
+void sched();
+
+extern void swtch(KernelContext* new_ctx, KernelContext** old_ctx);

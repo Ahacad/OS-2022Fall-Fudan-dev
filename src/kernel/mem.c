@@ -47,7 +47,7 @@ static void* simple_pool_alloc(isize size)
     }
     *(void**)r = &simple_alloc_pool[i];
     r = (void*)((u64)r + 8);
-    memset(r, 0, size);
+    memset(r, 0, (unsigned)size);
     return r;
 }
 
