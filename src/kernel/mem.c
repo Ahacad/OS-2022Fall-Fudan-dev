@@ -1,6 +1,6 @@
 #include <common/list.h>
+#include <common/string.h>
 #include <kernel/mem.h>
-#include <aarch64/mmu.h>
 #include <kernel/printk.h>
 #include <kernel/init.h>
 
@@ -46,7 +46,9 @@ static void* simple_pool_alloc(isize size)
             add_to_queue(&simple_alloc_pool[i], (QueueNode*)((u64)r + o));
     }
     *(void**)r = &simple_alloc_pool[i];
-    return (void*)((u64)r + 8);
+    r = (void*)((u64)r + 8);
+    memset(r, 0, size);
+    return r;
 }
 
 static void simple_pool_free(void* p)

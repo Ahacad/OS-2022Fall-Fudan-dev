@@ -28,17 +28,17 @@ ListNode *_detach_from_list(ListNode *node);
     acquire_spinlock(checker, lock); \
     ListNode* __t = _merge_list(node1, node2); \
     release_spinlock(checker, lock); \
-    __t })
+    __t; })
 #define insert_into_list(checker, lock, list, node) ({ \
     acquire_spinlock(checker, lock); \
     ListNode* __t = _insert_into_list(list, node); \
     release_spinlock(checker, lock); \
-    __t })
+    __t; })
 #define detach_from_list(checker, lock, node) ({ \
     acquire_spinlock(checker, lock); \
     ListNode* __t = _detach_from_list(node); \
     release_spinlock(checker, lock); \
-    __t })
+    __t; })
 
 
 // Lockfree Queue: implemented as a lock-free single linked list.

@@ -4,6 +4,7 @@
 #include <kernel/printk.h>
 
 static bool boot_secondary_cpus;
+NO_RETURN void idle_entry();
 
 NO_RETURN void kernel_init()
 {
@@ -11,9 +12,16 @@ NO_RETURN void kernel_init()
 
     do_init();
 
-    printk("hello world\n");
-    
     boot_secondary_cpus = true;
+
+    idle_entry();
+}
+
+NO_RETURN void kernel_entry()
+{
+    do_rest_init();
+
+    printk("hello world\n");
 
     while (1);
 }
@@ -28,7 +36,5 @@ NO_RETURN void main()
     while (!boot_secondary_cpus);
     arch_dsb_sy();
 
-    printk("cpu%d hello\n", cpuid());
-
-    while (1);
+    idle_entry();
 }
