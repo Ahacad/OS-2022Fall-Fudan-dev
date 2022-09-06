@@ -1,4 +1,3 @@
-#include <aarch64/arm.h>
 #include <aarch64/intrinsic.h>
 #include <driver/aux.h>
 #include <driver/gpio.h>

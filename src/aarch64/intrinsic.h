@@ -210,4 +210,8 @@ static inline bool arch_disable_trap() {
     return true;
 }
 
+static ALWAYS_INLINE NO_RETURN void arch_stop_cpu() {
+    while (1) arch_wfe();
+}
+
 void delay_us(u64 n);
