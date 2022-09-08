@@ -9,12 +9,11 @@ extern char end[];
 
 static QueueNode* free_page;
 
-static void init_pages()
+define_init(pages)
 {
     for (int i = (int)(((u64)&end + PAGE_SIZE - 1) / PAGE_SIZE); i < PHYSTOP / PAGE_SIZE; i++)
         kfree_page((void*)P2K(((u64)i) * PAGE_SIZE));
 }
-early_init_func(init_pages)
 
 void* kalloc_page()
 {

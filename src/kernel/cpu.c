@@ -25,15 +25,14 @@ static void cpu_clock_handler()
     }
 }
 
-static void init_clock_handler()
+define_early_init(clock_handler)
 {
     set_clock_handler(&cpu_clock_handler);
 }
-early_init_func(init_clock_handler);
 
 void set_cpu_on()
 {
-    ASSERT(!arch_disable_trap());
+    ASSERT(!_arch_disable_trap());
     arch_set_vbar(exception_vector);
     arch_reset_esr();
     init_clock();
@@ -43,7 +42,7 @@ void set_cpu_on()
 
 void set_cpu_off()
 {
-    arch_disable_trap();
+    _arch_disable_trap();
     cpus[cpuid()].online = false;
     printk("CPU %d: stopped\n", cpuid());
 }

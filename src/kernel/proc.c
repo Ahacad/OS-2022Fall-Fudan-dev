@@ -44,7 +44,7 @@ void init_proc(struct proc* p)
     release_spinlock(0, &max_pid_lock);
 }
 
-static void init_proc_list()
+define_early_init(proc_list)
 {
     setup_checker(0);
     init_spinlock(0, &proc_list_lock);
@@ -52,11 +52,9 @@ static void init_proc_list()
     root_proc.pid = 0;
     root_proc.state = UNUSED;
 }
-early_init_func(init_proc_list);
 
-static void init_root_proc()
+define_init(root_proc)
 {
     init_proc(&root_proc);
     start_proc(&root_proc, kernel_entry, 123456);
 }
-init_func(init_root_proc);

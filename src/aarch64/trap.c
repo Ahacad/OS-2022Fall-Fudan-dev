@@ -32,7 +32,7 @@ void trap_global_handler(UserContext* context)
         } break;
         default:
         {
-            // TODO: other exception
+            printk("Unknwon exception %d\n", ec);
             PANIC();
         }
     }

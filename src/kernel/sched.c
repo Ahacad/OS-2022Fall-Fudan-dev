@@ -16,7 +16,7 @@ struct proc* thisproc()
     return cpus[cpuid()].sched->proc;
 }
 
-static void init_sched()
+define_init(sched)
 {
     for (int i = 0; i < NCPU; i++)
     {
@@ -28,7 +28,6 @@ static void init_sched()
         cpus[i].sched = sh;
     }
 }
-init_func(init_sched);
 
 static void simple_sched()
 {
@@ -84,9 +83,10 @@ NO_RETURN void idle_entry()
         sched();
         if (panic_flag)
             break;
-        arch_enable_trap();
-        arch_wfi();
-        arch_disable_trap();
+        arch_with_trap
+        {
+            arch_wfi();
+        }
     }
     set_cpu_off();
     arch_stop_cpu();

@@ -9,7 +9,7 @@
 
 static InterruptHandler int_handler[NUM_IRQ_TYPES];
 
-static void init_interrupt()
+define_early_init(interrupt)
 {
     for (usize i = 0; i < NUM_IRQ_TYPES; i++)
     {
@@ -19,7 +19,6 @@ static void init_interrupt()
     // device_put_u32(ENABLE_IRQS_2, VC_ARASANSDIO_INT);
     device_put_u32(GPU_INT_ROUTE, GPU_IRQ2CORE(0));
 }
-early_init_func(init_interrupt);
 
 void set_interrupt_handler(InterruptType type, InterruptHandler handler)
 {
