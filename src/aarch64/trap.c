@@ -4,6 +4,7 @@
 #include <kernel/printk.h>
 #include <driver/interrupt.h>
 #include <kernel/proc.h>
+#include <kernel/syscall.h>
 
 void trap_global_handler(UserContext* context)
 {
@@ -27,8 +28,7 @@ void trap_global_handler(UserContext* context)
         } break;
         case ESR_EC_SVC64:
         {
-            // TODO: syscall
-            PANIC();
+            syscall_entry(context);
         } break;
         default:
         {

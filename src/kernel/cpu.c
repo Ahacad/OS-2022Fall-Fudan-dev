@@ -15,8 +15,8 @@ static void cpu_clock_handler()
     if (this->ucontext->elr & KSPACE_MASK)
     {
         // ignore k-mode clock interrupts
-        reset_clock(1000);
         printk("CPU %d: clock interrupt in kernel\n", cpuid());
+        reset_clock(1000);
     }
     else
     {

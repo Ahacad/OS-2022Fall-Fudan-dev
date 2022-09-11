@@ -6,7 +6,6 @@
 #include <kernel/sched.h>
 
 NO_BSS static bool boot_secondary_cpus;
-static char hello[16];
 
 NO_RETURN void idle_entry();
 
@@ -22,30 +21,19 @@ NO_RETURN void kernel_init()
     idle_entry();
 }
 
-static void test(u64 id)
-{
-    while (1)
-    {
-        printk("proc %d at cpu %d\n", id, cpuid());
-        arch_with_trap
-        {
-            delay_us(1000*4000);
-        }
-        sched();
-    }
-}
+void loop_start();
 
 NO_RETURN void kernel_entry()
 {
-    do_rest_init();
-
     printk("hello world\n");
 
-    for (int i = 1; i < 10; i++)
+    do_rest_init();
+
+    for (int i = 1; i < 2; i++)
     {
         struct proc* p = kalloc(sizeof(struct proc));
         init_proc(p);
-        start_proc(p, &test, i);
+        start_proc(p, &loop_start, i);
     }
 
     while (1)

@@ -5,6 +5,7 @@
 #define TRUE true
 #define FALSE false
 #define NULL 0
+#define auto __auto_type
 
 typedef char bool;
 typedef signed char i8;

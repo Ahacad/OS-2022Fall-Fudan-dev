@@ -64,6 +64,7 @@ static void simple_sched()
                 next->state = RUNNING;
             break;
     }
+    // printk("CPU %d: proc %d -> %d\n", cpuid(), this->pid, next ? next->pid : -1);
     if (next)
     {
         reset_clock(RR_TIME);
