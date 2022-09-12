@@ -21,7 +21,7 @@ NO_RETURN void kernel_init()
     idle_entry();
 }
 
-void loop_start();
+extern PTEntries kernel_pt;
 
 NO_RETURN void kernel_entry()
 {
@@ -29,16 +29,12 @@ NO_RETURN void kernel_entry()
 
     do_rest_init();
 
-    for (int i = 1; i < 2; i++)
-    {
-        struct proc* p = kalloc(sizeof(struct proc));
-        init_proc(p);
-        start_proc(p, &loop_start, i);
-    }
+    printk("%llx %llx\n", arch_get_ttbr0(), &kernel_pt);
 
     while (1)
         sched();
 }
+
 
 NO_RETURN void main()
 {

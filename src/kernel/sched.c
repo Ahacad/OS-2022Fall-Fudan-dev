@@ -11,6 +11,8 @@ static bool panic_flag;
 extern SpinLock proc_list_lock;
 extern struct proc root_proc;
 
+extern void swtch(KernelContext* new_ctx, KernelContext** old_ctx);
+
 struct proc* thisproc()
 {
     return cpus[cpuid()].sched->proc;
@@ -27,6 +29,16 @@ define_init(sched)
         sh->proc = sh->idle = p;
         cpus[i].sched = sh;
     }
+}
+
+void init_schinfo(struct schinfo* p)
+{
+    init_list_node(&p->runqueue);
+}
+
+void activate_proc(struct proc* p)
+{
+
 }
 
 static void simple_sched()

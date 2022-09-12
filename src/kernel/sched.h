@@ -1,6 +1,7 @@
 #pragma once
 
 #include <kernel/proc.h>
+#include <common/list.h>
 
 #define RR_TIME 1000
 
@@ -10,7 +11,12 @@ struct sched
     struct proc* idle;
 };
 
-extern void swtch(KernelContext* new_ctx, KernelContext** old_ctx);
+struct schinfo
+{
+    ListNode runqueue;
+};
+
+void init_schinfo(struct schinfo*);
 
 void sched();
 

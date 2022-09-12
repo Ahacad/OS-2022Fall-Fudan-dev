@@ -7,7 +7,6 @@
 
 SpinLock proc_list_lock;
 struct proc root_proc;
-static SpinLock max_pid_lock;
 static int max_pid;
 
 void kernel_entry();
@@ -27,9 +26,8 @@ void start_proc(struct proc* p, void(*entry)(u64), u64 arg)
     p->kcontext->x0 = (u64)entry;
     p->kcontext->x1 = (u64)arg;
     p->state = RUNNABLE;
-    acquire_spinlock(0, &proc_list_lock);
-    _insert_into_list(&root_proc.list, &p->list);
-    release_spinlock(0, &proc_list_lock);
+    p->schinfo = kalloc(sizeof(struct schinfo));
+    init_schinfo(&p->schinfo);
 }
 
 void init_proc(struct proc* p)
@@ -39,9 +37,10 @@ void init_proc(struct proc* p)
     p->kstack = kalloc_page();
     p->kcontext = (KernelContext*)((u64)p->kstack + PAGE_SIZE - 16 - sizeof(KernelContext));
     p->ucontext = NULL;
-    acquire_spinlock(0, &max_pid_lock);
+    acquire_spinlock(0, &proc_list_lock);
     p->pid = ++max_pid;
-    release_spinlock(0, &max_pid_lock);
+    _insert_into_list(&root_proc.list, &p->list);
+    release_spinlock(0, &proc_list_lock);
 }
 
 define_early_init(proc_list)

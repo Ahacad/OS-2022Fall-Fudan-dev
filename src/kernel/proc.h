@@ -2,6 +2,7 @@
 
 #include <common/defines.h>
 #include <common/list.h>
+#include <kernel/sched.h>
 
 enum procstate { UNUSED, IDLE, RUNNABLE, RUNNING };
 
@@ -28,6 +29,9 @@ struct proc
     int pid;
     enum procstate state; // bind to list
     ListNode list;
+    ListNode children;
+    ListNode parent_children;
+    struct schinfo* schinfo;
     void* kstack;
     UserContext* ucontext;
     KernelContext* kcontext; // also sp_el1
