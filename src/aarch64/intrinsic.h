@@ -192,7 +192,7 @@ static ALWAYS_INLINE void arch_yield() {
     asm volatile("yield" ::: "memory");
 }
 
-static inline bool arch_enable_trap() {
+static inline bool _arch_enable_trap() {
     u64 t;
     asm volatile("mrs %[x], daif" : [x] "=r"(t));
     if (t == 0)
@@ -201,13 +201,19 @@ static inline bool arch_enable_trap() {
     return false;
 }
 
-static inline bool arch_disable_trap() {
+static inline bool _arch_disable_trap() {
     u64 t;
     asm volatile("mrs %[x], daif" : [x] "=r"(t));
     if (t != 0)
         return false;
     asm volatile("msr daif, %[x]" ::[x] "r"(0xfll << 6));
     return true;
+}
+
+#define arch_with_trap for (int __t_i = (_arch_enable_trap(), 0); __t_i < 1; __t_i++, _arch_disable_trap())
+
+static ALWAYS_INLINE NO_RETURN void arch_stop_cpu() {
+    while (1) arch_wfe();
 }
 
 void delay_us(u64 n);

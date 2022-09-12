@@ -17,7 +17,7 @@ void _release_spinlock(SpinLock*);
 #define init_spinlock(checker, lock) _init_spinlock(lock)
 
 // Try to acquire a spinlock. Return true on success.
-#define try_acquire_spinlock(checker, lock) (checker_begin_ctx(checker), _acquire_spinlock(lock))
+#define try_acquire_spinlock(checker, lock) (checker_begin_ctx(checker), _acquire_spinlock(lock) || (checker_end_ctx(checker), 0))
 
 // Acquire a spinlock. Spin until success.
 #define acquire_spinlock(checker, lock) ({checker_begin_ctx(checker); while(!_acquire_spinlock(lock));})

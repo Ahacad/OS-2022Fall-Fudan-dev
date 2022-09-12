@@ -36,6 +36,7 @@ typedef u64 usize;
 
 #define BIT(i) (1ull << (i))
 
+#define NO_BSS        __attribute__((section(".data")))
 #define NO_RETURN      __attribute__((noreturn))
 #define INLINE        inline __attribute__((unused))
 #define ALWAYS_INLINE inline __attribute__((unused, always_inline))

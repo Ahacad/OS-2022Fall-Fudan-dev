@@ -12,12 +12,12 @@ static int max_pid;
 
 void kernel_entry();
 
-static NO_RETURN void proc_entry(void(*entry)(u64), u64 arg)
+NO_INLINE static u64 proc_entry(void(*entry)(u64), u64 arg)
 {
     _release_spinlock(&proc_list_lock);
-    entry(arg);
-    // exit
-    while (1);
+    u64* fp = __builtin_frame_address(0);
+    fp[1] = (u64)entry;
+    return arg;
 }
 
 void start_proc(struct proc* p, void(*entry)(u64), u64 arg)
@@ -44,7 +44,7 @@ void init_proc(struct proc* p)
     release_spinlock(0, &max_pid_lock);
 }
 
-static void init_proc_list()
+define_early_init(proc_list)
 {
     setup_checker(0);
     init_spinlock(0, &proc_list_lock);
@@ -52,11 +52,9 @@ static void init_proc_list()
     root_proc.pid = 0;
     root_proc.state = UNUSED;
 }
-early_init_func(init_proc_list);
 
-static void init_root_proc()
+define_init(root_proc)
 {
     init_proc(&root_proc);
     start_proc(&root_proc, kernel_entry, 123456);
 }
-init_func(init_root_proc);

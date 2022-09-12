@@ -7,6 +7,8 @@ enum procstate { UNUSED, IDLE, RUNNABLE, RUNNING };
 
 typedef struct UserContext
 {
+    u64 ttbr0;
+    u64 tpidr;
     u64 usp;
     u64 elr;
     u64 spsr;
