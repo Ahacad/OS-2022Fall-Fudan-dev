@@ -1,5 +1,6 @@
 #include <common/list.h>
 #include <common/string.h>
+#include <common/rc.h>
 #include <kernel/mem.h>
 #include <kernel/printk.h>
 #include <kernel/init.h>
@@ -8,6 +9,7 @@
 extern char end[];
 
 static QueueNode* free_page;
+RefCount alloc_page_cnt;
 
 define_early_init(pages)
 {
@@ -17,11 +19,13 @@ define_early_init(pages)
 
 void* kalloc_page()
 {
+    _increment_rc(&alloc_page_cnt);
     return (void*)fetch_from_queue(&free_page);
 }
 
 void kfree_page(void* p)
 {
+    _decrement_rc(&alloc_page_cnt);
     add_to_queue(&free_page, (QueueNode*)p);
 }
 

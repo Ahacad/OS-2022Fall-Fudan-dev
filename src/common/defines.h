@@ -4,7 +4,9 @@
 #define false 0
 #define TRUE true
 #define FALSE false
+#ifndef NULL
 #define NULL 0
+#endif
 #define auto __auto_type
 
 typedef char bool;

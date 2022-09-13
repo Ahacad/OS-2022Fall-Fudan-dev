@@ -5,7 +5,7 @@
 #include <kernel/printk.h>
 #include <kernel/sched.h>
 
-NO_BSS static bool boot_secondary_cpus;
+static bool boot_secondary_cpus = false;
 
 NO_RETURN void idle_entry();
 
@@ -21,18 +21,14 @@ NO_RETURN void kernel_init()
     idle_entry();
 }
 
-extern PTEntries kernel_pt;
-
 NO_RETURN void kernel_entry()
 {
     printk("hello world\n");
 
     do_rest_init();
 
-    printk("%llx %llx\n", arch_get_ttbr0(), &kernel_pt);
-
     while (1)
-        sched();
+        yield();
 }
 
 

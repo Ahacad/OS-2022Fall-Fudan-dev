@@ -1,4 +1,5 @@
 #include <kernel/sched.h>
+#include <kernel/proc.h>
 #include <kernel/init.h>
 #include <kernel/mem.h>
 #include <kernel/printk.h>
@@ -8,14 +9,20 @@
 
 static bool panic_flag;
 
-extern SpinLock proc_list_lock;
-extern struct proc root_proc;
+static SpinLock sched_lock;
+static ListNode sched_queue;
 
 extern void swtch(KernelContext* new_ctx, KernelContext** old_ctx);
 
 struct proc* thisproc()
 {
-    return cpus[cpuid()].sched->proc;
+    return cpus[cpuid()].sched.proc;
+}
+
+define_early_init(squeue)
+{
+    init_spinlock(&sched_lock);
+    init_list_node(&sched_queue);
 }
 
 define_init(sched)
@@ -25,75 +32,104 @@ define_init(sched)
         struct proc* p = kalloc(sizeof(struct proc));
         p->pid = 0;
         p->state = IDLE;
-        struct sched* sh = kalloc(sizeof(struct sched));
-        sh->proc = sh->idle = p;
-        cpus[i].sched = sh;
+        cpus[i].sched.proc = cpus[i].sched.idle = p;
     }
 }
 
 void init_schinfo(struct schinfo* p)
 {
-    init_list_node(&p->runqueue);
+    init_list_node(&p->sqnode);
 }
 
-void activate_proc(struct proc* p)
+static struct proc* pick_next(struct proc* this)
 {
-
+    if (panic_flag)
+        return cpus[cpuid()].sched.idle;
+    _for_in_list(p, this->state == IDLE ? &sched_queue : &this->schinfo.sqnode)
+    {
+        if (p == &sched_queue)
+            continue;
+        auto proc = container_of(p, struct proc, schinfo.sqnode);
+        if (proc->state == RUNNING)
+            continue;
+        if (proc->state == RUNNABLE)
+        {
+            return proc;
+        }
+        else
+            PANIC(); // WTF?
+    }
+    return cpus[cpuid()].sched.idle;
 }
 
-static void simple_sched()
+static void update_sched_clock(struct proc* p)
+{
+    (void)p; // disable the 'unused' warning
+    reset_clock(RR_TIME);
+}
+
+void activate_sched(struct proc* p)
 {
     setup_checker(0);
-    struct proc* this = thisproc(), * next = NULL;
-    bool goto_idle = panic_flag;
-    acquire_spinlock(0, &proc_list_lock);
-    if (!goto_idle)
-        _for_in_list(p, this->state == IDLE ? &root_proc.list : &this->list)
-        {
-            struct proc* proc = container_of(p, struct proc, list);
-            if (proc->state == RUNNABLE)
-            {
-                next = proc;
-                break;
-            }
-        }
-    switch (this->state)
-    {
-        case RUNNING:
-            if (next)
-            {
-                this->state = RUNNABLE;
-                next->state = RUNNING;
-            }
-            else if (goto_idle)
-            {
-                this->state = RUNNABLE;
-                next = cpus[cpuid()].sched->idle;
-            }
-            break;
-        case IDLE:
-            if (next)
-                next->state = RUNNING;
-            break;
-    }
-    // printk("CPU %d: proc %d -> %d\n", cpuid(), this->pid, next ? next->pid : -1);
-    if (next)
-    {
-        reset_clock(RR_TIME);
-        cpus[cpuid()].sched->proc = next;
-        swtch(next->kcontext, &this->kcontext);
-    }
-    release_spinlock(0, &proc_list_lock);
+    insert_into_list(0, &sched_lock, &sched_queue, &p->schinfo.sqnode);
 }
 
-__attribute__((weak, alias("simple_sched"))) void sched();
+void deactivate_sched(struct proc* p)
+{
+    setup_checker(0);
+    detach_from_list(0, &sched_lock, &p->schinfo.sqnode);
+}
 
+static void simple_sched(enum procstate new_state)
+{
+    setup_checker(0);
+    auto this = thisproc();
+    acquire_spinlock(0, &sched_lock);
+    if (this->state != IDLE)
+    {
+        ASSERT(this->state == RUNNING);
+        switch (new_state)
+        {
+        case RUNNABLE:
+            break;
+        default:
+            PANIC();
+        }
+        this->state = new_state;
+    }
+    auto next = pick_next(this);
+    update_sched_clock(next);
+    if (next->state != IDLE)
+    {
+        ASSERT(next->state == RUNNABLE);
+        next->state = RUNNING;
+    }
+    if (next != this)
+    {
+        cpus[cpuid()].sched.proc = next;
+        swtch(next->kcontext, &this->kcontext);
+    }
+    release_spinlock(0, &sched_lock);
+}
+
+__attribute__((weak, alias("simple_sched"))) void sched(enum procstate new_state);
+
+u64 proc_entry(void(*entry)(u64), u64 arg)
+{
+    _release_spinlock(&sched_lock);
+    u64* fp = __builtin_frame_address(0);
+    fp[1] = (u64)entry;
+    return arg;
+}
+
+#include <test/test.h>
 NO_RETURN void idle_entry()
 {
+    alloc_test();
     set_cpu_on();
     while (1)
     {
-        sched();
+        sched(IDLE);
         if (panic_flag)
             break;
         arch_with_trap

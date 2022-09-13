@@ -1,13 +1,13 @@
 #pragma once
 
-#include <kernel/sched.h>
+#include <kernel/schinfo.h>
 
 #define NCPU 4
 
 struct cpu
 {
     bool online;
-    struct sched* sched;
+    struct sched sched;
 };
 
 extern struct cpu cpus[NCPU];

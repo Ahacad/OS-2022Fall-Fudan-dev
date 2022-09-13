@@ -1,7 +1,7 @@
 #include <aarch64/intrinsic.h>
 #include <common/spinlock.h>
 
-void _init_spinlock(SpinLock *lock) {
+void init_spinlock(SpinLock *lock) {
     lock->locked = 0;
 }
 

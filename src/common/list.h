@@ -23,8 +23,8 @@ ListNode *_merge_list(ListNode *node1, ListNode *node2);
 // the last one in the list, it will return NULL.
 ListNode *_detach_from_list(ListNode *node);
 // - walk through the list
-#define _for_in_list(valptr, list) for (ListNode *__flag = (list), *valptr = __flag; \
-    __flag; __flag = (valptr = valptr->next) == __flag ? (void*)0 : __flag)
+#define _for_in_list(valptr, list) for (ListNode *__flag = (list), *valptr = __flag->next; \
+    valptr; valptr = valptr == __flag ? (void*)0 : valptr->next)
 
 
 // * List operations with locks

@@ -8,13 +8,11 @@ typedef struct {
     volatile bool locked;
 } SpinLock;
 
-void _init_spinlock(SpinLock*);
 bool _acquire_spinlock(SpinLock*);
 void _release_spinlock(SpinLock*);
 
-
 // Init a spinlock. It's optional for static objects.
-#define init_spinlock(checker, lock) _init_spinlock(lock)
+void init_spinlock(SpinLock*);
 
 // Try to acquire a spinlock. Return true on success.
 #define try_acquire_spinlock(checker, lock) (_acquire_spinlock(lock) && checker_begin_ctx(checker))

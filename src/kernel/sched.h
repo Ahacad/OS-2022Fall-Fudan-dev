@@ -1,24 +1,15 @@
 #pragma once
 
 #include <kernel/proc.h>
-#include <common/list.h>
 
 #define RR_TIME 1000
 
-struct sched
-{
-    struct proc* proc;
-    struct proc* idle;
-};
-
-struct schinfo
-{
-    ListNode runqueue;
-};
-
 void init_schinfo(struct schinfo*);
 
-void sched();
+void sched(enum procstate new_state);
+void activate_sched(struct proc*);
+void deactivate_sched(struct proc*);
+#define yield() sched(RUNNABLE)
 
 struct proc* thisproc();
 

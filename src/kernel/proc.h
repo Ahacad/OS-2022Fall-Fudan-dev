@@ -2,7 +2,7 @@
 
 #include <common/defines.h>
 #include <common/list.h>
-#include <kernel/sched.h>
+#include <kernel/schinfo.h>
 
 enum procstate { UNUSED, IDLE, RUNNABLE, RUNNING };
 
@@ -28,10 +28,10 @@ struct proc
 {
     int pid;
     enum procstate state; // bind to list
-    ListNode list;
     ListNode children;
-    ListNode parent_children;
-    struct schinfo* schinfo;
+    ListNode ptnode;
+    struct proc* parent;
+    struct schinfo schinfo;
     void* kstack;
     UserContext* ucontext;
     KernelContext* kcontext; // also sp_el1
@@ -39,3 +39,5 @@ struct proc
 
 void init_proc(struct proc*);
 void start_proc(struct proc*, void(*entry)(u64), u64 arg);
+// set proc->parent to parent without updating the children list of the old parent
+void reset_proc_parent(struct proc* proc, struct proc* parent);

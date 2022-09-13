@@ -5,29 +5,31 @@
 #include <common/list.h>
 #include <kernel/printk.h>
 
-SpinLock proc_list_lock;
+static SpinLock proc_list_lock;
 struct proc root_proc;
 static int max_pid;
 
 void kernel_entry();
+void proc_entry();
 
-NO_INLINE static u64 proc_entry(void(*entry)(u64), u64 arg)
+void reset_proc_parent(struct proc* proc, struct proc* parent)
 {
-    _release_spinlock(&proc_list_lock);
-    u64* fp = __builtin_frame_address(0);
-    fp[1] = (u64)entry;
-    return arg;
+    setup_checker(0);
+    acquire_spinlock(0, &proc_list_lock);
+    _insert_into_list(&parent->children, &proc->ptnode);
+    proc->parent = parent;
+    release_spinlock(0, &proc_list_lock);
 }
 
 void start_proc(struct proc* p, void(*entry)(u64), u64 arg)
 {
-    setup_checker(0);
+    if (p->parent == NULL)
+        reset_proc_parent(p, &root_proc);
     p->kcontext->lr = (u64)&proc_entry;
     p->kcontext->x0 = (u64)entry;
     p->kcontext->x1 = (u64)arg;
     p->state = RUNNABLE;
-    p->schinfo = kalloc(sizeof(struct schinfo));
-    init_schinfo(&p->schinfo);
+    activate_sched(p);
 }
 
 void init_proc(struct proc* p)
@@ -37,23 +39,23 @@ void init_proc(struct proc* p)
     p->kstack = kalloc_page();
     p->kcontext = (KernelContext*)((u64)p->kstack + PAGE_SIZE - 16 - sizeof(KernelContext));
     p->ucontext = NULL;
+    init_list_node(&p->children);
+    init_list_node(&p->ptnode);
+    p->parent = NULL;
+    init_schinfo(&p->schinfo);
     acquire_spinlock(0, &proc_list_lock);
     p->pid = ++max_pid;
-    _insert_into_list(&root_proc.list, &p->list);
     release_spinlock(0, &proc_list_lock);
 }
 
 define_early_init(proc_list)
 {
-    setup_checker(0);
-    init_spinlock(0, &proc_list_lock);
-    init_list_node(&root_proc.list);
-    root_proc.pid = 0;
-    root_proc.state = UNUSED;
+    init_spinlock(&proc_list_lock);
 }
 
 define_init(root_proc)
 {
     init_proc(&root_proc);
+    root_proc.parent = &root_proc;
     start_proc(&root_proc, kernel_entry, 123456);
 }

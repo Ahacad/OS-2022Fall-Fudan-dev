@@ -15,6 +15,8 @@ void trap_global_handler(UserContext* context)
     u64 iss = esr & ESR_ISS_MASK;
     u64 ir = esr & ESR_IR_MASK;
 
+    (void)iss;
+
     arch_reset_esr();
 
     switch (ec)
