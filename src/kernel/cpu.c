@@ -3,6 +3,7 @@
 #include <kernel/init.h>
 #include <driver/clock.h>
 #include <kernel/sched.h>
+#include <kernel/proc.h>
 #include <aarch64/mmu.h>
 
 struct cpu cpus[NCPU];
@@ -11,17 +12,17 @@ extern char exception_vector[];
 
 static void cpu_clock_handler()
 {
-    struct proc* this = thisproc();
+    auto this = thisproc();
     if (this->ucontext->elr & KSPACE_MASK)
     {
         // ignore k-mode clock interrupts
-        reset_clock(1000);
         printk("CPU %d: clock interrupt in kernel\n", cpuid());
+        reset_clock(1000);
     }
     else
     {
         // do context switch for user proc
-        sched();
+        yield();
     }
 }
 

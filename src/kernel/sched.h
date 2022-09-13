@@ -4,15 +4,12 @@
 
 #define RR_TIME 1000
 
-struct sched
-{
-    struct proc* proc;
-    struct proc* idle;
-};
+void init_schinfo(struct schinfo*);
 
-extern void swtch(KernelContext* new_ctx, KernelContext** old_ctx);
-
-void sched();
+void sched(enum procstate new_state);
+void activate_sched(struct proc*);
+void deactivate_sched(struct proc*);
+#define yield() sched(RUNNABLE)
 
 struct proc* thisproc();
 

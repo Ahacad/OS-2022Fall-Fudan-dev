@@ -1,4 +1,5 @@
 #include <kernel/syscall.h>
+#include <kernel/printk.h>
 
 void* syscall_table[NR_SYSCALL];
 
@@ -11,3 +12,8 @@ void syscall_entry(UserContext* context)
     context->x0 = ret;
 }
 
+define_syscall(myprint, u64 x0)
+{
+    printk("hello\n");
+    return x0;
+}

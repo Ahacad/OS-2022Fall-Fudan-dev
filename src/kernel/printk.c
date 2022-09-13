@@ -7,8 +7,7 @@ static SpinLock printk_lock;
 
 define_early_init(printk)
 {
-    setup_checker(0);
-    init_spinlock(0, &printk_lock);
+    init_spinlock(&printk_lock);
 }
 
 static void _put_char(void *_ctx, char c) {
