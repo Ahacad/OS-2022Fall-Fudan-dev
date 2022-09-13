@@ -20,7 +20,14 @@ void alloc_test()
     while (x.count < 4);
     arch_dsb_sy();
     for (int j = 0; j < y; j++)
+    {
         p[i][j] = kalloc_page();
+        if ((u64)p[i][j] & 1023)
+        {
+            printk("FAIL: alloc_page() = %p\n", p[i][j]);
+            while (1);
+        }
+    }
     for (int j = 0; j < y; j++)
         kfree_page(p[i][j]);
     _increment_rc(&x);
@@ -41,13 +48,17 @@ void alloc_test()
             {
                 case 0: z += rand() & 31; break;
                 case 1: z += rand() & 127; break;
-                case 2: z += rand() & 511; break;
-                case 3: z += rand() & 2047; break;
+                case 2: z += rand() & 508; break;
+                case 3: z += rand() & 2044; break;
             }
             p[i][j] = kalloc(z);
-            if (p[i][j] == NULL)
+            u64 q = (u64)p[i][j];
+            if (p[i][j] == NULL ||
+                ((z & 1) == 0 && (q & 1) != 0) ||
+                ((z & 3) == 0 && (q & 3) != 0) ||
+                ((z & 7) == 0 && (q & 7) != 0))
             {
-                printk("FAIL: alloc(%d) = null\n", z);
+                printk("FAIL: alloc(%d) = %p\n", z, p[i][j]);
                 while (1);
             }
             *(char*)p[i][j++] = i;
