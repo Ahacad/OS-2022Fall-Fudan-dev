@@ -62,4 +62,5 @@ void mem_init()
 {
     for (int i = (int)(((u64)&end + PAGE_SIZE - 1) / PAGE_SIZE); i < PHYSTOP / PAGE_SIZE; i++)
         kfree_page((void*)P2K(((u64)i) * PAGE_SIZE));
+    init_kmem();
 }
