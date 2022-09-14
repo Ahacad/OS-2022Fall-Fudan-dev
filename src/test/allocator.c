@@ -15,12 +15,19 @@ void alloc_test()
     int r = alloc_page_cnt.count;
     int y = 10000 - i * 500;
     if (i == 0)
-        printk("alloc_page\n");
+        printk("alloc_test\n");
     _increment_rc(&x);
     while (x.count < 4);
     arch_dsb_sy();
     for (int j = 0; j < y; j++)
+    {
         p[i][j] = kalloc_page();
+        if ((u64)p[i][j] & 1023)
+        {
+            printk("FAIL: alloc_page() = %p\n", p[i][j]);
+            while (1);
+        }
+    }
     for (int j = 0; j < y; j++)
         kfree_page(p[i][j]);
     _increment_rc(&x);
@@ -34,14 +41,24 @@ void alloc_test()
     arch_dsb_sy();
     for (int j = 0; j < 10000; )
     {
-        
-        if (j < 1000 || rand() > RAND_MAX / 3)
+        if (j < 1000 || rand() > RAND_MAX / 5 * 2)
         {
-            int z = (rand() & 1023) + 1;
-            p[i][j] = kalloc(z);
-            if (p[i][j] == NULL)
+            int z = 1;
+            switch (rand() & 3)
             {
-                printk("FAIL: alloc(%d) = null\n", z);
+                case 0: z += rand() & 31; break;
+                case 1: z += rand() & 127; break;
+                case 2: z += rand() & 508; break;
+                case 3: z += rand() & 2044; break;
+            }
+            p[i][j] = kalloc(z);
+            u64 q = (u64)p[i][j];
+            if (p[i][j] == NULL ||
+                ((z & 1) == 0 && (q & 1) != 0) ||
+                ((z & 3) == 0 && (q & 3) != 0) ||
+                ((z & 7) == 0 && (q & 7) != 0))
+            {
+                printk("FAIL: alloc(%d) = %p\n", z, p[i][j]);
                 while (1);
             }
             *(char*)p[i][j++] = i;
@@ -65,4 +82,5 @@ void alloc_test()
     arch_dsb_sy();
     if (cpuid() == 0)
         printk("PASS\nUsage: %d\n", alloc_page_cnt.count - r);
+    // theoretically best: ~3300
 }
