@@ -6,13 +6,12 @@
 
 void init_schinfo(struct schinfo*);
 
-void sched(enum procstate new_state);
-void activate_sched(struct proc*);
-void deactivate_sched(struct proc*);
-#define yield() sched(RUNNABLE)
+void activate_proc(struct proc*);
+void _acquire_sched_lock();
+#define lock_for_sched(checker) (checker_begin_ctx(checker), _acquire_sched_lock())
+void _sched(enum procstate new_state);
+// MUST call lock_for_sched() before sched() !!!
+#define sched(checker, new_state) (checker_end_ctx(checker), _sched(new_state))
+#define yield() (_acquire_sched_lock(), _sched(RUNNABLE))
 
 struct proc* thisproc();
-
-NO_INLINE NO_RETURN void _panic(const char*, int);
-#define PANIC() _panic(__FILE__, __LINE__)
-#define ASSERT(expr) ({ if (!(expr)) PANIC(); })

@@ -6,8 +6,9 @@
 #include <aarch64/intrinsic.h>
 #include <kernel/cpu.h>
 #include <driver/clock.h>
+#include <test/test.h>
 
-static bool panic_flag;
+extern bool panic_flag;
 
 static SpinLock sched_lock;
 static ListNode sched_queue;
@@ -31,8 +32,10 @@ define_init(sched)
     {
         struct proc* p = kalloc(sizeof(struct proc));
         p->pid = 0;
-        p->state = IDLE;
+        p->state = RUNNING;
+        p->idle = true;
         cpus[i].sched.proc = cpus[i].sched.idle = p;
+        cpus[i].sched.curr = &sched_queue;
     }
 }
 
@@ -41,11 +44,12 @@ void init_schinfo(struct schinfo* p)
     init_list_node(&p->sqnode);
 }
 
-static struct proc* pick_next(struct proc* this)
+static struct proc* pick_next()
 {
+    auto curr = cpus[cpuid()].sched.curr;
     if (panic_flag)
         return cpus[cpuid()].sched.idle;
-    _for_in_list(p, this->state == IDLE ? &sched_queue : &this->schinfo.sqnode)
+    _for_in_list(p, curr)
     {
         if (p == &sched_queue)
             continue;
@@ -54,11 +58,13 @@ static struct proc* pick_next(struct proc* this)
             continue;
         if (proc->state == RUNNABLE)
         {
+            cpus[cpuid()].sched.curr = &proc->schinfo.sqnode;
             return proc;
         }
         else
             PANIC(); // WTF?
     }
+    cpus[cpuid()].sched.curr = &sched_queue;
     return cpus[cpuid()].sched.idle;
 }
 
@@ -68,89 +74,66 @@ static void update_sched_clock(struct proc* p)
     reset_clock(RR_TIME);
 }
 
-void activate_sched(struct proc* p)
+void _acquire_sched_lock()
 {
-    setup_checker(0);
-    insert_into_list(0, &sched_lock, &sched_queue, &p->schinfo.sqnode);
+    _acquire_spinlock(&sched_lock);
 }
 
-void deactivate_sched(struct proc* p)
+void _release_sched_lock()
+{
+    _release_spinlock(&sched_lock);
+}
+
+void activate_proc(struct proc* p)
 {
     setup_checker(0);
-    detach_from_list(0, &sched_lock, &p->schinfo.sqnode);
+    acquire_spinlock(0, &sched_lock);
+    ASSERT(p->state != RUNNABLE && p->state != RUNNING);
+    p->state = RUNNABLE;
+    _insert_into_list(&sched_queue, &p->schinfo.sqnode);
+    release_spinlock(0, &sched_lock);
+}
+
+static void deactivate_this()
+{
+    cpus[cpuid()].sched.curr = cpus[cpuid()].sched.curr->next;
+    detach_from_list(&sched_lock, &thisproc()->schinfo.sqnode);
 }
 
 static void simple_sched(enum procstate new_state)
 {
-    setup_checker(0);
     auto this = thisproc();
-    acquire_spinlock(0, &sched_lock);
-    if (this->state != IDLE)
+    ASSERT(this->state == RUNNING);
+    switch (new_state)
     {
-        ASSERT(this->state == RUNNING);
-        switch (new_state)
-        {
-        case RUNNABLE:
-            break;
-        default:
-            PANIC();
-        }
-        this->state = new_state;
+    case RUNNABLE:
+        break;
+    case SLEEPING:
+        deactivate_this();
+        break;
+    default:
+        PANIC();
     }
-    auto next = pick_next(this);
+    this->state = new_state;
+    auto next = pick_next();
+    // printk("%d %d->%d\n",cpuid(),this->pid,next->pid);
     update_sched_clock(next);
-    if (next->state != IDLE)
-    {
-        ASSERT(next->state == RUNNABLE);
-        next->state = RUNNING;
-    }
+    ASSERT(next->state == RUNNABLE);
+    next->state = RUNNING;
     if (next != this)
     {
         cpus[cpuid()].sched.proc = next;
         swtch(next->kcontext, &this->kcontext);
     }
-    release_spinlock(0, &sched_lock);
+    _release_sched_lock();
 }
 
-__attribute__((weak, alias("simple_sched"))) void sched(enum procstate new_state);
+__attribute__((weak, alias("simple_sched"))) void _sched(enum procstate new_state);
 
 u64 proc_entry(void(*entry)(u64), u64 arg)
 {
-    _release_spinlock(&sched_lock);
-    u64* fp = __builtin_frame_address(0);
-    fp[1] = (u64)entry;
+    _release_sched_lock();
+    set_return_addr(entry);
     return arg;
 }
 
-#include <test/test.h>
-NO_RETURN void idle_entry()
-{
-    alloc_test();
-    set_cpu_on();
-    while (1)
-    {
-        sched(IDLE);
-        if (panic_flag)
-            break;
-        arch_with_trap
-        {
-            arch_wfi();
-        }
-    }
-    set_cpu_off();
-    arch_stop_cpu();
-}
-
-NO_INLINE NO_RETURN void _panic(const char* file, int line)
-{
-    printk("=====PANIC!=====\n");
-    panic_flag = true;
-    set_cpu_off();
-    for (int i = 0; i < NCPU; i++)
-    {
-        if (cpus[i].online)
-            i--;
-    }
-    printk("Kernel PANIC invoked at %s:%d. Stopped.\n", file, line);
-    arch_stop_cpu();
-}
