@@ -28,7 +28,7 @@ get_property(kernel_image GLOBAL PROPERTY kernel_image_path)
 get_property(sd_image GLOBAL PROPERTY sd_image_path)
 
 set(qemu_flags
-    -M "raspi3b"
+    -M "raspi3"
     -nographic
     -serial "null"
     -serial "mon:stdio"
