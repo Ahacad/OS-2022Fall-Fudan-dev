@@ -51,7 +51,7 @@ void alloc_test()
             int k = rand() % j;
             if (p[i][k] == NULL || *(char*)p[i][k] != i)
             {
-                printk("FAIL: p[%d][%d] wrong\n", i, k);
+                printk("FAIL: p[%d][%d] %d wrong\n", i, k,*(char*)p[i][k]);
                 while (1);
             }
             kfree(p[i][k]);
