@@ -44,6 +44,41 @@ void init_schinfo(struct schinfo* p)
     init_list_node(&p->sqnode);
 }
 
+void _acquire_sched_lock()
+{
+    _acquire_spinlock(&sched_lock);
+}
+
+void _release_sched_lock()
+{
+    _release_spinlock(&sched_lock);
+}
+
+void activate_proc(struct proc* p)
+{
+    _acquire_sched_lock();
+    ASSERT(p->state != RUNNABLE && p->state != RUNNING);
+    p->state = RUNNABLE;
+    _insert_into_list(&sched_queue, &p->schinfo.sqnode);
+    _release_sched_lock();
+}
+
+static void update_this_state(enum procstate new_state)
+{
+    switch (new_state)
+    {
+    case RUNNABLE:
+        break;
+    case SLEEPING:
+        cpus[cpuid()].sched.curr = cpus[cpuid()].sched.curr->next;
+        detach_from_list(&sched_lock, &thisproc()->schinfo.sqnode);
+        break;
+    default:
+        PANIC();
+    }
+    thisproc()->state = new_state;
+}
+
 static struct proc* pick_next()
 {
     auto curr = cpus[cpuid()].sched.curr;
@@ -74,49 +109,12 @@ static void update_sched_clock(struct proc* p)
     reset_clock(RR_TIME);
 }
 
-void _acquire_sched_lock()
-{
-    _acquire_spinlock(&sched_lock);
-}
-
-void _release_sched_lock()
-{
-    _release_spinlock(&sched_lock);
-}
-
-void activate_proc(struct proc* p)
-{
-    setup_checker(0);
-    acquire_spinlock(0, &sched_lock);
-    ASSERT(p->state != RUNNABLE && p->state != RUNNING);
-    p->state = RUNNABLE;
-    _insert_into_list(&sched_queue, &p->schinfo.sqnode);
-    release_spinlock(0, &sched_lock);
-}
-
-static void deactivate_this()
-{
-    cpus[cpuid()].sched.curr = cpus[cpuid()].sched.curr->next;
-    detach_from_list(&sched_lock, &thisproc()->schinfo.sqnode);
-}
-
 static void simple_sched(enum procstate new_state)
 {
     auto this = thisproc();
     ASSERT(this->state == RUNNING);
-    switch (new_state)
-    {
-    case RUNNABLE:
-        break;
-    case SLEEPING:
-        deactivate_this();
-        break;
-    default:
-        PANIC();
-    }
-    this->state = new_state;
+    update_this_state(new_state);
     auto next = pick_next();
-    // printk("%d %d->%d\n",cpuid(),this->pid,next->pid);
     update_sched_clock(next);
     ASSERT(next->state == RUNNABLE);
     next->state = RUNNING;

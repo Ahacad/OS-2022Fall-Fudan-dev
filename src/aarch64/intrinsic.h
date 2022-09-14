@@ -2,7 +2,7 @@
 
 #include <common/defines.h>
 
-static ALWAYS_INLINE usize cpuid() {
+static ALWAYS_INLINE int cpuid() {
     u64 id;
     asm volatile("mrs %[x], mpidr_el1" : [x] "=r"(id));
     return id & 0xff;
@@ -218,4 +218,4 @@ static ALWAYS_INLINE NO_RETURN void arch_stop_cpu() {
 
 void delay_us(u64 n);
 
-#define set_return_addr(addr) (((u64*)__builtin_frame_address(0))[1] = (u64)(addr))
+#define set_return_addr(addr) (compiler_fence(), ((volatile u64*)__builtin_frame_address(0))[1] = (u64)(addr), compiler_fence())

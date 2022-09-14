@@ -44,6 +44,7 @@ typedef u64 usize;
 #define INLINE        inline __attribute__((unused))
 #define ALWAYS_INLINE inline __attribute__((unused, always_inline))
 #define NO_INLINE     __attribute__((noinline))
+#define NO_IPA        __attribute__((noipa))
 
 // NOTE: no_return will disable traps.
 // NO_RETURN NO_INLINE void no_return();

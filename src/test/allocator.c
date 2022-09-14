@@ -30,7 +30,7 @@ void alloc_test()
         kfree_page(p[i][j]);
     SYNC(2)
     if (alloc_page_cnt.count != r)
-        FAIL("FAIL: alloc_page_cnt %d -> %d\n", r, alloc_page_cnt);
+        FAIL("FAIL: alloc_page_cnt %d -> %lld\n", r, alloc_page_cnt.count);
     SYNC(3)
     for (int j = 0; j < 10000; )
     {
@@ -65,7 +65,7 @@ void alloc_test()
     }
     SYNC(4)
     if (cpuid() == 0)
-        printk("Usage: %d\n", alloc_page_cnt.count - r);
+        printk("Usage: %lld\n", alloc_page_cnt.count - r);
     SYNC(5)
     for (int j = 0; j < 10000; j++)
         kfree(p[i][j]);
