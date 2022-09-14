@@ -25,23 +25,25 @@ ListNode *_detach_from_list(ListNode *node);
 // - walk through the list
 #define _for_in_list(valptr, list) for (ListNode *__flag = (list), *valptr = __flag->next; \
     valptr; valptr = valptr == __flag ? (void*)0 : valptr->next)
+// - test if the list is empty
+#define _empty_list(list) ((list)->next == (list))
 
 
 // * List operations with locks
-#define merge_list(checker, lock, node1, node2) ({ \
-    acquire_spinlock(checker, lock); \
+#define merge_list(lock, node1, node2) ({ \
+    _acquire_spinlock(lock); \
     ListNode* __t = _merge_list(node1, node2); \
-    release_spinlock(checker, lock); \
+    _release_spinlock(lock); \
     __t; })
-#define insert_into_list(checker, lock, list, node) ({ \
-    acquire_spinlock(checker, lock); \
+#define insert_into_list(lock, list, node) ({ \
+    _acquire_spinlock(lock); \
     ListNode* __t = _insert_into_list(list, node); \
-    release_spinlock(checker, lock); \
+    _release_spinlock(lock); \
     __t; })
-#define detach_from_list(checker, lock, node) ({ \
-    acquire_spinlock(checker, lock); \
+#define detach_from_list(lock, node) ({ \
+    _acquire_spinlock(lock); \
     ListNode* __t = _detach_from_list(node); \
-    release_spinlock(checker, lock); \
+    _release_spinlock(lock); \
     __t; })
 
 

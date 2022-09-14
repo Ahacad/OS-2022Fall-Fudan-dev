@@ -2,9 +2,10 @@
 
 #include <common/defines.h>
 #include <common/list.h>
+#include <common/sleeplock.h>
 #include <kernel/schinfo.h>
 
-enum procstate { UNUSED, IDLE, RUNNABLE, RUNNING };
+enum procstate { UNUSED, RUNNABLE, RUNNING, SLEEPING };
 
 typedef struct UserContext
 {
@@ -26,6 +27,8 @@ typedef struct KernelContext
 
 struct proc
 {
+    bool killed;
+    bool idle;
     int pid;
     enum procstate state; // bind to list
     ListNode children;
@@ -33,6 +36,7 @@ struct proc
     struct proc* parent;
     struct schinfo schinfo;
     void* kstack;
+    ListNode slnode;
     UserContext* ucontext;
     KernelContext* kcontext; // also sp_el1
 };

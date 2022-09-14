@@ -3,6 +3,7 @@
 #include <kernel/mem.h>
 #include <kernel/sched.h>
 #include <common/list.h>
+#include <common/string.h>
 #include <kernel/printk.h>
 
 static SpinLock proc_list_lock;
@@ -28,13 +29,13 @@ void start_proc(struct proc* p, void(*entry)(u64), u64 arg)
     p->kcontext->lr = (u64)&proc_entry;
     p->kcontext->x0 = (u64)entry;
     p->kcontext->x1 = (u64)arg;
-    p->state = RUNNABLE;
-    activate_sched(p);
+    activate_proc(p);
 }
 
 void init_proc(struct proc* p)
 {
     setup_checker(0);
+    memset(p, 0, sizeof(*p));
     p->state = UNUSED;
     p->kstack = kalloc_page();
     p->kcontext = (KernelContext*)((u64)p->kstack + PAGE_SIZE - 16 - sizeof(KernelContext));

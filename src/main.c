@@ -9,37 +9,31 @@ static bool boot_secondary_cpus = false;
 
 NO_RETURN void idle_entry();
 
-NO_RETURN void kernel_init()
+void kernel_init()
 {
     // clear BSS section.
     extern char edata[], end[];
     memset(edata, 0, (usize)(end - edata));
 
     do_early_init();
+    mem_init();
     do_init();
     boot_secondary_cpus = true;
-    idle_entry();
-}
-
-NO_RETURN void kernel_entry()
-{
-    printk("hello world\n");
-
-    do_rest_init();
-
-    while (1)
-        yield();
 }
 
 
-NO_RETURN void main()
+void main()
 {
     if (cpuid() == 0)
     {
         kernel_init();
     }
+    else
+    {
+        while (!boot_secondary_cpus);
+        arch_dsb_sy();
+    }
 
-    while (!boot_secondary_cpus);
-    arch_dsb_sy();
-    idle_entry();
+    // enter idle process
+    set_return_addr(idle_entry);
 }

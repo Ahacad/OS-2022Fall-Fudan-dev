@@ -8,6 +8,8 @@ struct sched
 {
     struct proc* proc;
     struct proc* idle;
+    
+    ListNode* curr;
 };
 
 // embeded data for procs
