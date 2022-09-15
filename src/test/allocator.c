@@ -43,12 +43,18 @@ void alloc_test() {
             int r = rand() & 255;
             if (r < 127) { // [17,64]
                 z = rand() % 48 + 17;
-            } else if (r < 191) { // [1,16]
+                z = round_up((u64)z, 4ll);
+            } else if (r < 181) { // [1,16]
                 z = rand() % 16 + 1;
-            } else if (r < 255) { // [65,256]
+            } else if (r < 235) { // [65,256]
                 z = rand() % 192 + 65;
-            } else { // [257,2040]
-                z = rand() % 1784 + 257;
+                z = round_up((u64)z, 8ll);
+            } else if (r < 255) { // [257,512]
+                z = rand() % 256 + 257;
+                z = round_up((u64)z, 8ll);
+            } else { // [513,2040]
+                z = rand() % 1528 + 513;
+                z = round_up((u64)z, 8ll);
             }
             p[i][j] = kalloc(z);
             u64 q = (u64)p[i][j];
