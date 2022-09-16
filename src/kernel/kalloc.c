@@ -99,7 +99,7 @@ static void init_kmem_cache(int idx) {
     kmalloc_[idx].objectNum = maxNum;
     kmalloc_[idx].objectOffset = objOffset;
 }
-define_early_init(kmalloc) {
+void init_kmem() {
     for (int i = 0; i < 12; i++)
         init_kmem_cache(i);
 }

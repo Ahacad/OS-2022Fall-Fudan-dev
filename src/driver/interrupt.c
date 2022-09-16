@@ -50,7 +50,7 @@ void interrupt_global_handler()
                 }
                 else
                 {
-                    printk("Unknown interrupt type %d", i);
+                    printk("Unknown interrupt type %lld", i);
                     PANIC();
                 }
             }
