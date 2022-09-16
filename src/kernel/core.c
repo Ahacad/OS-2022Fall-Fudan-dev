@@ -8,7 +8,7 @@ bool panic_flag;
 
 NO_RETURN void idle_entry()
 {
-    // alloc_test();
+    alloc_test();
 
     set_cpu_on();
     while (1)
