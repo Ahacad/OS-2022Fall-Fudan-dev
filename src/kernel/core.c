@@ -9,6 +9,7 @@ bool panic_flag;
 NO_RETURN void idle_entry()
 {
     alloc_test();
+    rbtree_test();
     set_cpu_on();
     while (1)
     {
