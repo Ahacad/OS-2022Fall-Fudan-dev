@@ -57,9 +57,11 @@ void _release_sched_lock()
 void activate_proc(struct proc* p)
 {
     _acquire_sched_lock();
-    ASSERT(p->state != RUNNABLE && p->state != RUNNING);
-    p->state = RUNNABLE;
-    _insert_into_list(&sched_queue, &p->schinfo.sqnode);
+    if (p->state == UNUSED || p->state == SLEEPING)
+    {
+        p->state = RUNNABLE;
+        _insert_into_list(&sched_queue, &p->schinfo.sqnode);
+    }
     _release_sched_lock();
 }
 
@@ -71,7 +73,7 @@ static void update_this_state(enum procstate new_state)
         break;
     case SLEEPING:
         cpus[cpuid()].sched.curr = cpus[cpuid()].sched.curr->next;
-        detach_from_list(&sched_lock, &thisproc()->schinfo.sqnode);
+        _detach_from_list(&thisproc()->schinfo.sqnode);
         break;
     default:
         PANIC();
@@ -115,6 +117,7 @@ static void simple_sched(enum procstate new_state)
     ASSERT(this->state == RUNNING);
     update_this_state(new_state);
     auto next = pick_next();
+    // printk("[%d %d->%d]\n", cpuid(), this->pid, next->pid);
     update_sched_clock(next);
     ASSERT(next->state == RUNNABLE);
     next->state = RUNNING;

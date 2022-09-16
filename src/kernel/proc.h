@@ -2,7 +2,6 @@
 
 #include <common/defines.h>
 #include <common/list.h>
-#include <common/sleeplock.h>
 #include <kernel/schinfo.h>
 
 enum procstate { UNUSED, RUNNABLE, RUNNING, SLEEPING };
@@ -44,4 +43,4 @@ struct proc
 void init_proc(struct proc*);
 void start_proc(struct proc*, void(*entry)(u64), u64 arg);
 // set proc->parent to parent without updating the children list of the old parent
-void reset_proc_parent(struct proc* proc, struct proc* parent);
+// void reset_proc_parent(struct proc* proc, struct proc* parent);

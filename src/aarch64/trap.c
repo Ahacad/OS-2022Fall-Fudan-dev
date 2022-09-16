@@ -34,7 +34,7 @@ void trap_global_handler(UserContext* context)
         } break;
         default:
         {
-            printk("Unknwon exception %d\n", ec);
+            printk("Unknwon exception %llu\n", ec);
             PANIC();
         }
     }
@@ -42,6 +42,6 @@ void trap_global_handler(UserContext* context)
 
 NO_RETURN void trap_error_handler(u64 type)
 {
-    printk("Unknown trap type %d\n", type);
+    printk("Unknown trap type %llu\n", type);
     PANIC();
 }

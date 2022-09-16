@@ -40,6 +40,7 @@ void init_proc(struct proc* p)
     p->kstack = kalloc_page();
     p->kcontext = (KernelContext*)((u64)p->kstack + PAGE_SIZE - 16 - sizeof(KernelContext));
     p->ucontext = NULL;
+    init_list_node(&p->slnode);
     init_list_node(&p->children);
     init_list_node(&p->ptnode);
     p->parent = NULL;

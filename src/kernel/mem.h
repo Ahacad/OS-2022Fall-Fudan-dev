@@ -8,5 +8,3 @@ void kfree_page(void*);
 
 void* kalloc(isize);
 void kfree(void*);
-
-void mem_init();
