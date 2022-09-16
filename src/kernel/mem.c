@@ -58,9 +58,9 @@ __attribute__((weak, alias("simple_pool_alloc"))) void* kalloc(isize);
 __attribute__((weak, alias("simple_pool_free"))) void kfree(void*);
 
 
-void mem_init()
+define_early_init(mem)
 {
     for (int i = (int)(((u64)&end + PAGE_SIZE - 1) / PAGE_SIZE); i < PHYSTOP / PAGE_SIZE; i++)
         kfree_page((void*)P2K(((u64)i) * PAGE_SIZE));
-    init_kmem();
+    // init_kmem();
 }

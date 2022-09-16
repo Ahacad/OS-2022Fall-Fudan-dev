@@ -16,7 +16,6 @@ void kernel_init()
     memset(edata, 0, (usize)(end - edata));
 
     do_early_init();
-    mem_init();
     do_init();
     boot_secondary_cpus = true;
 }

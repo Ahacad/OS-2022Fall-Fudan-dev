@@ -28,6 +28,7 @@ NO_RETURN void idle_entry()
 NO_RETURN void kernel_entry()
 {
     printk("hello world\n");
+    // proc_test();
 
     do_rest_init();
 

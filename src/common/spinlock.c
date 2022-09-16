@@ -15,7 +15,7 @@ bool _try_acquire_spinlock(SpinLock *lock) {
 
 void _acquire_spinlock(SpinLock* lock)
 {
-    while (!_try_acquire_spinlock(lock));
+    while (!_try_acquire_spinlock(lock)) arch_yield();
 }
 
 void _release_spinlock(SpinLock *lock) {

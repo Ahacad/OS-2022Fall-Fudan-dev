@@ -1,3 +1,4 @@
+#if 0
 #include "common/list.h"
 #include "common/spinlock.h"
 #include "common/string.h"
@@ -115,3 +116,5 @@ void kfree(void *p) {
     int idx = slabp->idx;
     kmalloc_[idx].free(&kmalloc_[idx], p);
 }
+
+#endif
