@@ -22,10 +22,12 @@
 
 #include <common/defines.h>
 #include <common/spinlock.h>
+#include <common/sem.h>
 #include <driver/buf.h>
 #include <driver/clock.h>
 #include <driver/interrupt.h>
 #include <driver/uart.h>
+#include <kernel/printk.h>
 
 // Private functions.
 static void sd_start(struct buf* b);
@@ -499,9 +501,9 @@ static int sdBaseClock;
  */
 
 // struct buf sdque;
-struct SpinLock sdlock;
-struct Queue sdque;
-struct buf mbr;
+SpinLock sdlock;
+Queue sdque;
+buf mbr;
 
 u32 lba2, sz2;
 
@@ -648,9 +650,10 @@ void sd_intr() {
         }
 
         bid->flags = B_VALID;
+
         wakeup(bid);
         queue_pop(&sdque);
-        if (!empty(&sdque)) {
+        if (!queue_empty(&sdque)) {
             _acquire_spinlock(&sdlock);
             buf* buffer = container_of(queue_front(&sdque), buf, node);
             sd_start(buffer);
@@ -667,7 +670,7 @@ void sd_intr() {
  * If B_DIRTY is set, write buf to disk, clear B_DIRTY, set B_VALID.
  * Else if B_VALID is not set, read buf from disk, set B_VALID.
  */
-void sdrw(struct buf* b) {
+void sdrw(buf* b) {
     /*
      *
      * if list.size is 0, then use sd_start
@@ -680,20 +683,27 @@ void sdrw(struct buf* b) {
     /* TODO: Lab7 driver. */
 
     queue_lock(&sdque);
-    if (empty(&sdque)) {
-        push(&sdque, b);
+
+    if (queue_empty(&sdque)) {
+        queue_push(&sdque, &b->node);
         _acquire_spinlock(&sdlock);
+
         buf* buffer = container_of(queue_front(&sdque), buf, node);
         sd_start(buffer);
+
         _release_spinlock(&sdlock);
     } else {
-        push(&sdque, b);
+        queue_push(&sdque, &b->node);
     }
+
+    init_sleeplock(&ql);
+    printk("...\n");
     while (true) {
         if (b->flags == B_VALID)
             break;
         sleep(b, &qlock);
     }
+
     queue_unlock(&sdque);
 }
 
@@ -715,7 +725,9 @@ void sd_test() {
         // Backup.
         b[0].flags = 0;
         b[0].blockno = (u32)i;
+        printk("!!!\n");
         sdrw(&b[0]);
+        printk("???\n");
         // Write some value.
         b[i].flags = B_DIRTY;
         b[i].blockno = (u32)i;
@@ -739,7 +751,7 @@ void sd_test() {
 
     // Read benchmark
     arch_dsb_sy();
-    t = (i64)timestamp();
+    t = (i64)get_timestamp();
     arch_dsb_sy();
     for (int i = 0; i < n; i++) {
         b[i].flags = 0;
@@ -747,14 +759,14 @@ void sd_test() {
         sdrw(&b[i]);
     }
     arch_dsb_sy();
-    t = (i64)timestamp() - t;
+    t = (i64)get_timestamp() - t;
     arch_dsb_sy();
-    printk("- read %lldB (%lldMB), t: %lld cycles, speed: %lld.%lld MB/s\n", n * BSIZE, mb, t,
+    printk("- read %dB (%dMB), t: %lld cycles, speed: %lld.%lld MB/s\n", n * BSIZE, mb, t,
            mb * f / t, (mb * f * 10 / t) % 10);
 
     // Write benchmark
     arch_dsb_sy();
-    t = (i64)timestamp();
+    t = (i64)get_timestamp();
     arch_dsb_sy();
     for (int i = 0; i < n; i++) {
         b[i].flags = B_DIRTY;
@@ -762,10 +774,10 @@ void sd_test() {
         sdrw(&b[i]);
     }
     arch_dsb_sy();
-    t = (i64)timestamp() - t;
+    t = (i64)get_timestamp() - t;
     arch_dsb_sy();
 
-    printk("- write %lldB (%lldMB), t: %lld cycles, speed: %lld.%lld MB/s\n", n * BSIZE, mb, t,
+    printk("- write %dB (%dMB), t: %lld cycles, speed: %lld.%lld MB/s\n", n * BSIZE, mb, t,
            mb * f / t, (mb * f * 10 / t) % 10);
 }
 
@@ -1290,40 +1302,40 @@ static int sdSwitchVoltage() {
 static void sdInitGPIO() {
     u32 r;
     // GPIO_CD
-    r = get32(GPFSEL4);
+    r = device_get_u32(GPFSEL4);
     r &= (u32)(~(7 << (7 * 3)));
-    put32(GPFSEL4, r);
-    put32(GPPUD, 2);
+    device_put_u32(GPFSEL4, r);
+    device_put_u32(GPPUD, 2);
     delay(150);
-    put32(GPPUDCLK1, 1 << 15);
+    device_put_u32(GPPUDCLK1, 1 << 15);
     delay(150);
-    put32(GPPUD, 0);
-    put32(GPPUDCLK1, 0);
-    r = get32(GPHEN1);
+    device_put_u32(GPPUD, 0);
+    device_put_u32(GPPUDCLK1, 0);
+    r = device_get_u32(GPHEN1);
     r |= 1 << 15;
-    put32(GPHEN1, r);
+    device_put_u32(GPHEN1, r);
 
     // GPIO_CLK, GPIO_CMD
-    r = get32(GPFSEL4);
+    r = device_get_u32(GPFSEL4);
     r |= (7 << (8 * 3)) | (7 << (9 * 3));
-    put32(GPFSEL4, r);
-    put32(GPPUD, 2);
+    device_put_u32(GPFSEL4, r);
+    device_put_u32(GPPUD, 2);
     delay(150);
-    put32(GPPUDCLK1, (1 << 16) | (1 << 17));
+    device_put_u32(GPPUDCLK1, (1 << 16) | (1 << 17));
     delay(150);
-    put32(GPPUD, 0);
-    put32(GPPUDCLK1, 0);
+    device_put_u32(GPPUD, 0);
+    device_put_u32(GPPUDCLK1, 0);
 
     // GPIO_DAT0, GPIO_DAT1, GPIO_DAT2, GPIO_DAT3
-    r = get32(GPFSEL5);
+    r = device_get_u32(GPFSEL5);
     r |= (7 << (0 * 3)) | (7 << (1 * 3)) | (7 << (2 * 3)) | (7 << (3 * 3));
-    put32(GPFSEL5, r);
-    put32(GPPUD, 2);
+    device_put_u32(GPFSEL5, r);
+    device_put_u32(GPPUD, 2);
     delay(150);
-    put32(GPPUDCLK1, (1 << 18) | (1 << 19) | (1 << 20) | (1 << 21));
+    device_put_u32(GPPUDCLK1, (1 << 18) | (1 << 19) | (1 << 20) | (1 << 21));
     delay(150);
-    put32(GPPUD, 0);
-    put32(GPPUDCLK1, 0);
+    device_put_u32(GPPUD, 0);
+    device_put_u32(GPPUDCLK1, 0);
 }
 
 /* Get the base clock speed. */
@@ -1349,11 +1361,11 @@ int sdInit() {
 
     // Check GPIO 47 status
     //  int cardAbsent = gpioGetPinLevel(GPIO_CD);
-    //  int cardAbsent = get32(GPLEV1) & (1 << (47-32)); // TEST
+    //  int cardAbsent = device_get_u32(GPLEV1) & (1 << (47-32)); // TEST
     int cardAbsent = 0;
     //  int cardEjected = gpioGetEventDetected(GPIO_CD);
 
-    int cardEjected = get32(GPEDS1) & (1 << (47 - 32));
+    int cardEjected = device_get_u32(GPEDS1) & (1 << (47 - 32));
     int oldCID[4];
     //  printk("In SD init card, status %08x interrupt %08x card absent %d
     //  ejected %d\n",*EMMC_STATUS,*EMMC_INTERRUPT,cardAbsent,cardEjected);
