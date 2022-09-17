@@ -2,9 +2,10 @@
 
 #include <common/defines.h>
 #include <common/list.h>
+#include <common/sem.h>
 #include <kernel/schinfo.h>
 
-enum procstate { UNUSED, RUNNABLE, RUNNING, SLEEPING };
+enum procstate { UNUSED, RUNNABLE, RUNNING, SLEEPING, ZOMBIE };
 
 typedef struct UserContext
 {
@@ -29,18 +30,19 @@ struct proc
     bool killed;
     bool idle;
     int pid;
-    enum procstate state; // bind to list
+    int exitcode;
+    enum procstate state; // ruled by scheduler
+    Semaphore childexit;
     ListNode children;
     ListNode ptnode;
     struct proc* parent;
     struct schinfo schinfo;
     void* kstack;
-    ListNode slnode;
     UserContext* ucontext;
     KernelContext* kcontext; // also sp_el1
 };
 
 void init_proc(struct proc*);
 void start_proc(struct proc*, void(*entry)(u64), u64 arg);
-// set proc->parent to parent without updating the children list of the old parent
-// void reset_proc_parent(struct proc* proc, struct proc* parent);
+NO_RETURN void exit(int code);
+int wait(int* exitcode);

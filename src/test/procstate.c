@@ -1,23 +1,20 @@
 #include <kernel/sched.h>
-#include <common/event.h>
+#include <common/sem.h>
 #include <test/test.h>
 #include <kernel/mem.h>
 #include <kernel/printk.h>
 
-static Event e0, e1, end;
+static Semaphore e0;
 
-static void proc_test_main(u64 id)
+static void proc_test_main(u64 arg)
 {
-    ASSERT(wait_for_event(&e0));
-    printk("%llu\n", id);
-    set_event(&e1);
-    wait_for_event(&end);
+    ASSERT(wait_sem(&e0));
+    exit(arg);
 }
 
 void proc_test()
 {
-    init_event(&e0, false);
-    init_event(&e1, false);
+    init_sem(&e0, 0);
     for (int i = 0; i < 10; i++)
     {
         struct proc* p = kalloc(sizeof *p);
@@ -26,8 +23,15 @@ void proc_test()
     }
     for (int i = 0; i < 10; i++)
     {
-        printk("%d ", i);
-        set_event(&e0);
-        ASSERT(wait_for_event(&e1));
+        post_sem(&e0);
     }
+    while (1)
+    {
+        int ex;
+        int ch = wait(&ex);
+        if (ch == -1)
+            break;
+        printk("pid %d exit with code %d\n", ch, ex);
+    }
+    printk("proc_test PASS\n");
 }
