@@ -17,7 +17,20 @@ void kernel_init()
 
     do_early_init();
     do_init();
+
     boot_secondary_cpus = true;
+}
+
+void test1(int x)
+{
+    setup_checker(111);
+    checker_begin_ctx(111);
+    if (x == 0)
+    {
+        checker_end_ctx(111);
+        return;
+    }
+    checker_end_ctx(111);
 }
 
 

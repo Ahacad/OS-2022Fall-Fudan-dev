@@ -22,7 +22,7 @@ static SpinLock lock;
         while (1)                                                              \
             ;                                                                  \
     }
-RefCount x;
+static RefCount x;
 
 void rbtree_test() {
     int cid = cpuid();

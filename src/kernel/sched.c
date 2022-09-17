@@ -54,6 +54,15 @@ void _release_sched_lock()
     _release_spinlock(&sched_lock);
 }
 
+bool is_zombie(struct proc* p)
+{
+    bool r;
+    _acquire_sched_lock();
+    r = p->state == ZOMBIE;
+    _release_sched_lock();
+    return r;
+}
+
 void activate_proc(struct proc* p)
 {
     _acquire_sched_lock();
@@ -71,7 +80,7 @@ static void update_this_state(enum procstate new_state)
     {
     case RUNNABLE:
         break;
-    case SLEEPING:
+    case SLEEPING: case ZOMBIE:
         cpus[cpuid()].sched.curr = cpus[cpuid()].sched.curr->next;
         _detach_from_list(&thisproc()->schinfo.sqnode);
         break;
