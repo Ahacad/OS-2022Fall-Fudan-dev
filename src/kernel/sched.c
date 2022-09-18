@@ -114,9 +114,9 @@ static struct proc* pick_next()
     return cpus[cpuid()].sched.idle;
 }
 
-static void update_sched_clock(struct proc* p)
+static void update_this_proc(struct proc* p)
 {
-    (void)p; // disable the 'unused' warning
+    cpus[cpuid()].sched.proc = p;
     reset_clock(RR_TIME);
 }
 
@@ -127,12 +127,11 @@ static void simple_sched(enum procstate new_state)
     update_this_state(new_state);
     auto next = pick_next();
     // printk("[%d %d->%d]\n", cpuid(), this->pid, next->pid);
-    update_sched_clock(next);
+    update_this_proc(next);
     ASSERT(next->state == RUNNABLE);
     next->state = RUNNING;
     if (next != this)
     {
-        cpus[cpuid()].sched.proc = next;
         swtch(next->kcontext, &this->kcontext);
     }
     _release_sched_lock();
