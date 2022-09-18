@@ -696,9 +696,7 @@ void sdrw(buf* b) {
     } else {
         queue_push(&sdque, &b->node);
     }
-
-    init_sleeplock(&ql);
-    printk("...\n");
+    init_sem(&b->sl, 0);
     while (true) {
         if (b->flags == B_VALID)
             break;
@@ -730,9 +728,7 @@ void sd_test() {
         // Backup.
         b[0].flags = 0;
         b[0].blockno = (u32)i;
-        printk("!!!\n");
         sdrw(&b[0]);
-        printk("???\n");
         // Write some value.
         b[i].flags = B_DIRTY;
         b[i].blockno = (u32)i;
