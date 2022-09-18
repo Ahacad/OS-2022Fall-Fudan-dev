@@ -3,6 +3,7 @@
 #include <common/defines.h>
 #include <common/list.h>
 #include <common/string.h>
+#include <common/sem.h>
 
 #define BSIZE 512
 
@@ -19,4 +20,5 @@ typedef struct buf {
      */
     /* TODO: Lab7 driver. */
     ListNode node;
+    Semaphore sl;
 } buf;

@@ -651,7 +651,8 @@ void sd_intr() {
 
         bid->flags = B_VALID;
 
-        wakeup(bid);
+        // wakeup(bid);
+        post_sem(&bid->sl);
         queue_pop(&sdque);
         if (!queue_empty(&sdque)) {
             _acquire_spinlock(&sdlock);
@@ -701,7 +702,11 @@ void sdrw(buf* b) {
     while (true) {
         if (b->flags == B_VALID)
             break;
-        sleep(b, &qlock);
+
+        // sleep(b, &qlock);
+        queue_unlock(&sdque);
+        wait_sem(&b->sl);
+        queue_lock(&sdque);
     }
 
     queue_unlock(&sdque);
