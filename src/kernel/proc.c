@@ -37,12 +37,15 @@ NO_RETURN void exit(int code)
     this->exitcode = code;
     // transfer children to the root_proc
     acquire_spinlock(0, &proc_list_lock);
-    _for_in_list(p, &this->children)
+    auto cl = _detach_from_list(&this->children);
+    if (cl)
     {
-        if (p == &this->children)
-            continue;
-        auto proc = container_of(p, struct proc, ptnode);
-        _set_proc_parent(proc, &root_proc);
+        _for_in_list(p, cl)
+        {
+            auto proc = container_of(p, struct proc, ptnode);
+            proc->parent = &root_proc;
+        }
+        _merge_list(&root_proc.children, cl);
     }
     // notify the root_proc if there is zombie in children
     while (get_sem(&this->childexit))
@@ -94,7 +97,7 @@ int wait(int* exitcode)
     PANIC(); // ???
 }
 
-void start_proc(struct proc* p, void(*entry)(u64), u64 arg)
+int start_proc(struct proc* p, void(*entry)(u64), u64 arg)
 {
     if (p->parent == NULL)
     {
@@ -106,7 +109,9 @@ void start_proc(struct proc* p, void(*entry)(u64), u64 arg)
     p->kcontext->lr = (u64)&proc_entry;
     p->kcontext->x0 = (u64)entry;
     p->kcontext->x1 = (u64)arg;
+    int pid = p->pid;
     activate_proc(p);
+    return pid;
 }
 
 void init_proc(struct proc* p)
