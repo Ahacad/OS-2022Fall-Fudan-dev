@@ -10,10 +10,6 @@ static bool boot_secondary_cpus = false;
 
 NO_RETURN void idle_entry();
 
-define_init(sdcard) {
-    sd_init();
-    printk("sdinit ok");
-}
 void kernel_init() {
     // clear BSS section.
     extern char edata[], end[];

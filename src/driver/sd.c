@@ -28,6 +28,7 @@
 #include <driver/interrupt.h>
 #include <driver/uart.h>
 #include <kernel/printk.h>
+#include <kernel/init.h>
 
 // Private functions.
 static void sd_start(struct buf* b);
@@ -507,6 +508,11 @@ buf mbr;
 
 u32 lba2, sz2;
 
+define_init(sdcard) {
+    sd_init();
+    printk("sdinit ok");
+}
+
 void sd_init() {
     /*
      * Initialize the lock and request queue if any.
@@ -703,7 +709,9 @@ void sdrw(buf* b) {
 
         // sleep(b, &qlock);
         queue_unlock(&sdque);
+        printk("???\n");
         wait_sem(&b->sl);
+        printk("!!!\n");
         queue_lock(&sdque);
     }
 

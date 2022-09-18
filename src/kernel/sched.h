@@ -2,7 +2,7 @@
 
 #include <kernel/proc.h>
 
-#define RR_TIME 1
+#define RR_TIME 1000
 
 void init_schinfo(struct schinfo*);
 

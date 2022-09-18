@@ -116,8 +116,14 @@ static struct proc* pick_next()
 
 static void update_sched_clock(struct proc* p)
 {
-    (void)p; // disable the 'unused' warning
-    reset_clock(RR_TIME);
+    if (p->idle)
+    {
+        reset_clock(1); // give more wakeups to wfi()...
+    }
+    else
+    {
+        reset_clock(RR_TIME);
+    }
 }
 
 static void simple_sched(enum procstate new_state)
