@@ -709,9 +709,7 @@ void sdrw(buf* b) {
 
         // sleep(b, &qlock);
         queue_unlock(&sdque);
-        printk("???\n");
         wait_sem(&b->sl);
-        printk("!!!\n");
         queue_lock(&sdque);
     }
 

@@ -63,15 +63,19 @@ bool is_zombie(struct proc* p)
     return r;
 }
 
-void activate_proc(struct proc* p)
+bool activate_proc(struct proc* p)
 {
+    bool ret = false;
     _acquire_sched_lock();
+    ASSERT(p->state != ZOMBIE);
     if (p->state == UNUSED || p->state == SLEEPING)
     {
         p->state = RUNNABLE;
         _insert_into_list(&sched_queue, &p->schinfo.sqnode);
+        ret = true;
     }
     _release_sched_lock();
+    return ret;
 }
 
 static void update_this_state(enum procstate new_state)

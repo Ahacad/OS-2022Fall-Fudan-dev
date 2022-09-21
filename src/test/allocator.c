@@ -87,7 +87,12 @@ void alloc_test() {
         }
     }
     SYNC(4)
-    if (cpuid() == 0) printk("Usage: %lld\n", alloc_page_cnt.count - r);
+    if (cpuid() == 0) {
+        i64 z = 0;
+        for (int j = 0; j < 4; j++) for (int k = 0; k < 10000; k++)
+            z += sz[j][k];
+        printk("Total: %lld\nUsage: %lld\n", z, alloc_page_cnt.count - r);
+    }
     SYNC(5)
     for (int j = 0; j < 10000; j++)
         kfree(p[i][j]);
