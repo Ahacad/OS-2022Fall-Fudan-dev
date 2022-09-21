@@ -240,7 +240,7 @@ static void __rb_erase_fix(rb_node parent, rb_root root) {
 }
 int _rb_insert(rb_node node,rb_root rt,bool (*cmp)(rb_node lnode,rb_node rnode)){
     rb_node nw = rt->rb_node, parent = NULL;
-    node->rb_left=node->rb_right=NULL;
+    node->rb_left=node->rb_right=node->__rb_parent_color=NULL;
     while (nw) {
         parent = nw;
         if (cmp(node,nw)) {
