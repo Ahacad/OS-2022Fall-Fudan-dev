@@ -54,6 +54,15 @@ void _release_sched_lock()
     _release_spinlock(&sched_lock);
 }
 
+bool is_zombie(struct proc* p)
+{
+    bool r;
+    _acquire_sched_lock();
+    r = p->state == ZOMBIE;
+    _release_sched_lock();
+    return r;
+}
+
 void activate_proc(struct proc* p)
 {
     _acquire_sched_lock();
@@ -71,7 +80,7 @@ static void update_this_state(enum procstate new_state)
     {
     case RUNNABLE:
         break;
-    case SLEEPING:
+    case SLEEPING: case ZOMBIE:
         cpus[cpuid()].sched.curr = cpus[cpuid()].sched.curr->next;
         _detach_from_list(&thisproc()->schinfo.sqnode);
         break;
@@ -105,10 +114,17 @@ static struct proc* pick_next()
     return cpus[cpuid()].sched.idle;
 }
 
-static void update_sched_clock(struct proc* p)
+static void update_this_proc(struct proc* p)
 {
-    (void)p; // disable the 'unused' warning
-    reset_clock(RR_TIME);
+    cpus[cpuid()].sched.proc = p;
+    if (p->idle)
+    {
+        reset_clock(1); // give more wakeups to wfi()...
+    }
+    else
+    {
+        reset_clock(RR_TIME);
+    }
 }
 
 static void simple_sched(enum procstate new_state)
@@ -118,12 +134,11 @@ static void simple_sched(enum procstate new_state)
     update_this_state(new_state);
     auto next = pick_next();
     // printk("[%d %d->%d]\n", cpuid(), this->pid, next->pid);
-    update_sched_clock(next);
+    update_this_proc(next);
     ASSERT(next->state == RUNNABLE);
     next->state = RUNNING;
     if (next != this)
     {
-        cpus[cpuid()].sched.proc = next;
         swtch(next->kcontext, &this->kcontext);
     }
     _release_sched_lock();
