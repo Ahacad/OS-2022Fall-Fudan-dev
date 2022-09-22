@@ -1,10 +1,28 @@
 
 #include <driver/sddef.h>
 
+/*
+ * Initialize SD card.
+ * Returns zero if initialization was successful, non-zero otherwise.
+ */
 int sdInit();
+/*
+Wait for interrupt.
+return after interrupt handling
+*/
 static int sdWaitForInterrupt(unsigned int mask);
+/*
+data synchronization barrier.
+use before access memory
+*/
 static ALWAYS_INLINE void arch_dsb_sy();
+/*
+call handler when interrupt
+*/
 void set_interrupt_handler(InterruptType type, InterruptHandler handler);
+/*
+
+*/
 ALWAYS_INLINE u32 get_EMMC_DATA() {
     return *EMMC_DATA;
 }
@@ -30,23 +48,27 @@ define_init(sdcard) {
     sd_init();
     printk("sdinit ok");
 }
-
+/*
+ * 1.call sdInit.
+ * 2.Initialize the lock and request queue if any.
+ * 3.Read and parse 1st block (MBR) and collect whatever
+ * information you want.
+ * 4.set interrupt handler
+ *
+ * Hint:
+ * 1.Maybe need to use sd_start for reading, and
+ * sdWaitForInterrupt for clearing certain interrupt.
+ * 2.Remember to call sd_init() at somewhere.
+ * 3.the first number is 0.
+ *
+ * TODO: Lab7 driver.
+ */
 void sd_init() {
-    /*
-     * Initialize the lock and request queue if any.
-     * Remember to call sd_init() at somewhere.
-     */
-    /* TODO: Lab7 driver. */
+
     sdInit();
     init_spinlock(&sdlock);
     queue_init(&sdque);
-    /*
-     * Read and parse 1st block (MBR) and collect whatever
-     * information you wan.
-     *
-     * Hint: Maybe need to use sd_start for reading, and
-     * sdWaitForInterrupt for clearing certain interrupt.
-     */
+
     buf mbr;
     u32 lba2, sz2;
     mbr.blockno = 0;
@@ -132,7 +154,7 @@ void request_head() {
     _release_spinlock(&sdlock);
 }
 
-/* The interrupt handler. */
+/* The interrupt handler. Sync buf with disk.*/
 void sd_intr() {
     /*
      * Pay attention to whether there is any element in the buflist.
@@ -142,16 +164,19 @@ void sd_intr() {
      * Notice that reading and writing are different, you can use flags
      * to identify.
      *
+     * If B_DIRTY is set, write buf to disk, clear B_DIRTY, set B_VALID.
+     * Else if B_VALID is not set, read buf from disk, set B_VALID.
+     *
      * Remember to clear the flags after reading/writing.
      *
      * When finished, remember to use pop and check whether the list is
      * empty, if not, continue to read/write.
      *
-     * You may use some buflist functions, arch_dsb_sy(), sd_start(), wakeup()
+     * You may use some buflist functions, arch_dsb_sy(), sd_start(), post_sem()
      * and sdWaitForInterrupt() to complete this function.
+     *
+     * TODO: Lab7 driver.
      */
-
-    /* TODO: Lab7 driver. */
     queue_lock(&sdque);
     if (!queue_empty(&sdque)) {
         u32 intr = get_and_clear_EMMC_INTERRUPT();
@@ -185,21 +210,17 @@ void sd_intr() {
 }
 
 /*
- * Sync buf with disk.
- * If B_DIRTY is set, write buf to disk, clear B_DIRTY, set B_VALID.
- * Else if B_VALID is not set, read buf from disk, set B_VALID.
+ *
+ * 1.add buf to the queue
+ * 2.if no buf in queue before,send request now
+ * 3.'loop' until buf flag is modified
+ *
+ * You may use some buflist functions, arch_dsb_sy(), sd_start(), wait_sem()
+ * to complete this function.
+ *  TODO: Lab7 driver.
  */
-void sdrw(buf* b) {
-    /*
-     *
-     * if list.size is 0, then use sd_start
-     * else Add to the list
-     *
-     * then sleep, use loop to check whether buf flag is modified, if modified,
-     * then break
-     */
 
-    /* TODO: Lab7 driver. */
+void sdrw(buf* b) {
 
     queue_lock(&sdque);
     bool idle = queue_empty(&sdque);
