@@ -1,5 +1,19 @@
 
 #include <driver/sddef.h>
+
+int sdInit();
+static int sdWaitForInterrupt(unsigned int mask);
+static ALWAYS_INLINE void arch_dsb_sy();
+void set_interrupt_handler(InterruptType type, InterruptHandler handler);
+ALWAYS_INLINE u32 get_EMMC_DATA() {
+    return *EMMC_DATA;
+}
+ALWAYS_INLINE u32 get_and_clear_EMMC_INTERRUPT() {
+    u32 t = *EMMC_INTERRUPT;
+    *EMMC_INTERRUPT = t;
+    return t;
+}
+
 /*
  * Initialize SD card and parse MBR.
  * 1. The first partition should be FAT and is used for booting.
@@ -11,9 +25,6 @@
 // struct buf sdque;
 SpinLock sdlock;
 Queue sdque;
-buf mbr;
-
-u32 lba2, sz2;
 
 define_init(sdcard) {
     sd_init();
@@ -36,6 +47,8 @@ void sd_init() {
      * Hint: Maybe need to use sd_start for reading, and
      * sdWaitForInterrupt for clearing certain interrupt.
      */
+    buf mbr;
+    u32 lba2, sz2;
     mbr.blockno = 0;
     mbr.flags = 0;
     sd_start(&mbr);
@@ -51,7 +64,6 @@ void sd_init() {
     printk("lba2: %x\nsz2: %x\n", lba2, sz2);
     set_interrupt_handler(IRQ_SDIO, sd_intr);
     set_interrupt_handler(IRQ_ARASANSDIO, sd_intr);
-    // printk("set IRQ_ARASANSDIO%d\n", IRQ_ARASANSDIO);
     /* TODO: Lab7 driver. */
 }
 
@@ -113,6 +125,13 @@ static void sd_start(struct buf* b) {
     }
 }
 
+void request_head() {
+    _acquire_spinlock(&sdlock);
+    buf* buffer = container_of(queue_front(&sdque), buf, node);
+    sd_start(buffer);
+    _release_spinlock(&sdlock);
+}
+
 /* The interrupt handler. */
 void sd_intr() {
     /*
@@ -135,15 +154,12 @@ void sd_intr() {
     /* TODO: Lab7 driver. */
     queue_lock(&sdque);
     if (!queue_empty(&sdque)) {
-        int intr = *EMMC_INTERRUPT;
-        *EMMC_INTERRUPT = intr;
+        u32 intr = get_and_clear_EMMC_INTERRUPT();
         buf* bid = container_of(queue_front(&sdque), buf, node);
-
         arch_dsb_sy();
         if (intr != INT_READ_RDY && intr != INT_DATA_DONE) {
             PANIC();
         }
-        arch_dsb_sy();
         int is_write = (bid->flags & B_DIRTY);
         if ((is_write != 0 && intr != INT_DATA_DONE) || (is_write == 0 && intr != INT_READ_RDY)) {
             printk("%d | %d\n", is_write, intr);
@@ -153,25 +169,19 @@ void sd_intr() {
             int done = 0;
             u32* ip = (u32*)bid->data;
             while (done < 128)
-                ip[done++] = *EMMC_DATA;
+                ip[done++] = get_EMMC_DATA();
             sdWaitForInterrupt(INT_DATA_DONE);
         }
 
         bid->flags = B_VALID;
-
         // wakeup(bid);
         post_sem(&bid->sl);
         queue_pop(&sdque);
         if (!queue_empty(&sdque)) {
-            _acquire_spinlock(&sdlock);
-            buf* buffer = container_of(queue_front(&sdque), buf, node);
-            sd_start(buffer);
-            _release_spinlock(&sdlock);
+            request_head();
         }
-        queue_unlock(&sdque);
-    } else {
-        queue_unlock(&sdque);
     }
+    queue_unlock(&sdque);
 }
 
 /*
@@ -192,29 +202,20 @@ void sdrw(buf* b) {
     /* TODO: Lab7 driver. */
 
     queue_lock(&sdque);
-
-    if (queue_empty(&sdque)) {
-        queue_push(&sdque, &b->node);
-        _acquire_spinlock(&sdlock);
-
-        buf* buffer = container_of(queue_front(&sdque), buf, node);
-        sd_start(buffer);
-
-        _release_spinlock(&sdlock);
-    } else {
-        queue_push(&sdque, &b->node);
+    bool idle = queue_empty(&sdque);
+    queue_push(&sdque, &b->node);
+    if (idle) {
+        request_head();
     }
     init_sem(&b->sl, 0);
     while (true) {
         if (b->flags == B_VALID)
             break;
-
         // sleep(b, &qlock);
         queue_unlock(&sdque);
         wait_sem(&b->sl);
         queue_lock(&sdque);
     }
-
     queue_unlock(&sdque);
 }
 
