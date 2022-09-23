@@ -24,7 +24,7 @@
 #include <common/defines.h>
 #include <common/spinlock.h>
 #include <common/sem.h>
-#include <driver/buf.h>
+#include <common/buf.h>
 #include <driver/clock.h>
 #include <driver/interrupt.h>
 #include <driver/uart.h>
