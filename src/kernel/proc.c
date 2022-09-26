@@ -120,8 +120,8 @@ void init_proc(struct proc* p)
     memset(p, 0, sizeof(*p));
     p->state = UNUSED;
     p->kstack = kalloc_page();
-    p->kcontext = (KernelContext*)((u64)p->kstack + PAGE_SIZE - 16 - sizeof(KernelContext));
-    p->ucontext = NULL;
+    p->kcontext = (KernelContext*)((u64)p->kstack + PAGE_SIZE - 16 - sizeof(KernelContext) - sizeof(UserContext));
+    p->ucontext = (UserContext*)((u64)p->kstack + PAGE_SIZE - 16 - sizeof(UserContext));
     init_sem(&p->childexit, 0);
     init_list_node(&p->children);
     init_list_node(&p->ptnode);
