@@ -16,9 +16,9 @@
 #define IPC_CREATE 2
 #define IPC_EXCL 1
 #define IPC_NOWAIT 1
-#define MSG_MSGSZ (PAGE_SIZE-sizeof(msg_msg))
-#define MSG_MSGSEGSZ (PAGE_SIZE-sizeof(msg_msgseg))
-#define MAX_MSGNUM 32
+#define MSG_MSGSZ (PAGE_SIZE-(int)sizeof(msg_msg))
+#define MSG_MSGSEGSZ (PAGE_SIZE-(int)sizeof(msg_msgseg))
+#define MAX_MSGNUM 132
 typedef struct msg_queue {
     int key;
     int seq;
@@ -40,7 +40,7 @@ typedef struct msgbuf {
     char data[];
 } msgbuf;
 typedef struct msg_msgseg {
-    msg_msgseg* nxt;
+    struct msg_msgseg* nxt;
     char data[];
 } msg_msgseg;
 typedef struct msg_msg {

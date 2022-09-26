@@ -1,7 +1,9 @@
 #include "ipc.h"
 #include "string.h"
-#include "mem.h"
+#include "kernel/mem.h"
 #include "kernel/sched.h"
+#include "kernel/init.h"
+#include "kernel/printk.h"
 static ipc_ids msg_ids;
 void init_ipc() {
     init_spinlock(&msg_ids.lock);
@@ -9,6 +11,9 @@ void init_ipc() {
     msg_ids.seq = 0;
     msg_ids.size = 16;
     memset(msg_ids.entries, 0, sizeof(msg_ids.entries));
+}
+define_early_init(ipc_msg) {
+    init_ipc();
 }
 static int ipc_addid(msg_queue* que) {
     int id = 0;
@@ -27,10 +32,11 @@ static inline int ipc_buildin(int id, int seq) {
     return seq * SEQ_MULTIPLIER + id;
 }
 static int newque(int key) {
+    int id;
     msg_queue* que = (msg_queue*)kalloc(sizeof(msg_queue));
     if (que == NULL)
         return ENOMEM;
-    if (ipc_addid(que) < 0) {
+    if ((id = ipc_addid(que)) < 0) {
         kfree(que);
         return ENOSEQ;
     }
@@ -40,7 +46,7 @@ static int newque(int key) {
     init_list_node(&que->q_message);
     init_list_node(&que->q_receiver);
     init_list_node(&que->q_sender);
-    return ipc_buildin(que->seq, que->key);
+    return ipc_buildin(id, que->seq);
 }
 static int ipc_findkey(int key) {
     int id = 0;
@@ -119,11 +125,13 @@ static int testmsg(int rqtype, int type) {
         return 1;
     else if (rqtype < 0)
         return rqtype + type <= 0;
-    else if (rqtype > 0)
+    else
         return rqtype == type;
 }
 static int pipeline_send(msg_queue* msgq, msg_msg* msg) {
     _for_in_list(node, &msgq->q_receiver) {
+        if (node == &msgq->q_receiver)
+            break;
         msg_receiver* rcver = container_of(node, msg_receiver, node);
         if (testmsg(rcver->mtype, msg->mtype)) {
             _detach_from_list(node);
@@ -162,14 +170,14 @@ retry:
         }
         msg_sender sender;
         sender.proc = thisproc();
-        _insert_into_list(&msgq->q_sender.prev, &sender.node);
+        _insert_into_list(msgq->q_sender.prev, &sender.node);
         _acquire_sched_lock();
         _release_spinlock(&msg_ids.lock);
         _sched(SLEEPING);
         goto retry;
     }
     if (!pipeline_send(msgq, msg)) {
-        _insert_into_list(&msgq->q_message.prev, &msg->node);
+        _insert_into_list(msgq->q_message.prev, &msg->node);
         msgq->sum_msg++;
     }
     _release_spinlock(&msg_ids.lock);
@@ -179,9 +187,9 @@ free_obj:
     free_msg(msg);
     return err;
 }
-static void ss_wakeup(ListNode head) {
-    while (!_empty_list(&head)) {
-        ListNode* node = head.next;
+static void ss_wakeup(ListNode* head) {
+    while (!_empty_list(head)) {
+        ListNode* node = head->next;
         _detach_from_list(node);
         activate_proc(container_of(node, msg_sender, node)->proc);
     }
@@ -200,7 +208,7 @@ static void store_msg(void* dst, msg_msg* msg, int msgsz) {
 }
 int sys_msgrcv(int msgid, msgbuf* msgp, int msgsz, int mtype, int msgflg) {
     int err = EINVAL;
-    if (msgsz < 0 || msgp == NULL || msgp->mtype < 0)
+    if (msgsz < 0 || msgp == NULL)
         return EINVAL;
     _acquire_spinlock(&msg_ids.lock);
     msg_queue* msgq = get_msgq(msgid);
@@ -210,6 +218,8 @@ int sys_msgrcv(int msgid, msgbuf* msgp, int msgsz, int mtype, int msgflg) {
     }
     msg_msg* found_msg = NULL;
     _for_in_list(node, &msgq->q_message) {
+        if (node == &msgq->q_message)
+            break;
         msg_msg* msg = container_of(node, msg_msg, node);
         if (testmsg(mtype, msg->mtype)) {
             found_msg = msg;
@@ -226,7 +236,7 @@ int sys_msgrcv(int msgid, msgbuf* msgp, int msgsz, int mtype, int msgflg) {
         }
         _detach_from_list(&found_msg->node);
         msgq->sum_msg--;
-        ss_wakeup(msgq->q_sender);
+        ss_wakeup(&msgq->q_sender);
         _release_spinlock(&msg_ids.lock);
     } else {
         if (msgflg & IPC_NOWAIT) {
@@ -234,7 +244,7 @@ int sys_msgrcv(int msgid, msgbuf* msgp, int msgsz, int mtype, int msgflg) {
             goto out_lock;
         }
         msg_receiver receiver;
-        _insert_into_list(&msgq->q_receiver.prev, &receiver.node);
+        _insert_into_list(msgq->q_receiver.prev, &receiver.node);
         receiver.mtype = mtype;
         receiver.proc = thisproc();
         receiver.size = msgsz;
@@ -266,7 +276,7 @@ static void freeque(int id) {
     msg_queue* msgq = get_msgq(id);
     if (msgq != NULL) {
         msg_ids.entries[id % SEQ_MULTIPLIER] = NULL;
-        ss_wakeup(msgq->q_receiver);
+        ss_wakeup(&msgq->q_receiver);
         expunge_all(msgq);
         while (!_empty_list(&msgq->q_message)) {
             ListNode* node = msgq->q_message.next;
