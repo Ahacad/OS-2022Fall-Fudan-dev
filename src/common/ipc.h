@@ -18,7 +18,7 @@
 #define IPC_NOWAIT 1
 #define MSG_MSGSZ (PAGE_SIZE-(int)sizeof(msg_msg))
 #define MSG_MSGSEGSZ (PAGE_SIZE-(int)sizeof(msg_msgseg))
-#define MAX_MSGNUM 132
+#define MAX_MSGNUM 256
 typedef struct msg_queue {
     int key;
     int seq;
