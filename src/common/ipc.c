@@ -149,7 +149,7 @@ static int pipeline_send(msg_queue* msgq, msg_msg* msg) {
 }
 int sys_msgsnd(int msgid, msgbuf* msgp, int msgsz, int msgflg) {
     int err = EINVAL;
-    if (msgsz < 0 || msgp == NULL || msgp->mtype < 0)
+    if (msgsz < 0 || msgp == NULL || msgp->mtype < 1)
         return EINVAL;
     msg_msg* msg = load_msg((void*)msgp->data, msgsz);
     if (msg == NULL)
