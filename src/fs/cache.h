@@ -3,6 +3,7 @@
 #include <common/list.h>
 #include <fs/block_device.h>
 #include <fs/defines.h>
+#include <common/sem.h>
 
 // maximum number of distinct blocks that one atomic operation can hold.
 #define OP_MAX_NUM_BLOCKS 10
@@ -23,9 +24,7 @@ typedef struct {
     bool acquired;  // is the block already acquired by some thread?
     bool pinned;  // if a block is pinned, it should not be evicted from the
                   // cache.
-    // FIXME
-    // u32 rc;
-    SleepLock lock;  // this lock protects `valid` and `data`.
+    Semaphore sem;  // this lock protects `valid` and `data`.
     bool valid;  // is the content of block loaded from disk?
     u8 data[BLOCK_SIZE];
 } Block;
@@ -33,7 +32,6 @@ typedef struct {
 // `OpContext` represents an atomic operation.
 // see `begin_op` and `end_op`.
 typedef struct {
-    usize ts;  // the timestamp/identifier allocated by `begin_op`.
     usize rm;
     // hint: you may want to add something else here.
 } OpContext;
