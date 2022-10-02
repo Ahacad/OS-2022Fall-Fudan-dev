@@ -897,9 +897,9 @@ int main() {
         {"alloc", basic::test_alloc},
         {"alloc_free", basic::test_alloc_free},
 
-        {"concurrent_acquire", concurrent::test_acquire},
+       {"concurrent_acquire", concurrent::test_acquire},
         {"concurrent_sync", concurrent::test_sync},
-        {"concurrent_alloc", concurrent::test_alloc},
+        // {"concurrent_alloc", concurrent::test_alloc},
 
         {"simple_crash", crash::test_simple_crash},
         {"single", [] { crash::test_parallel(1000, 1, 5, 0); }},

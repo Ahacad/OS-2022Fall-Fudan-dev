@@ -14,7 +14,7 @@ static SpinLock lock;  // protects block cache.
 static ListNode head;  // the list of all allocated in-memory block.
 static LogHeader header;  // in-memory copy of log header block.
 
-static SpinLock semlock;
+static SpinLock semlock, atomiclock;
 #define beginpost _acquire_spinlock(&semlock)
 #define endpost _release_spinlock(&semlock)
 #define endwait _acquire_spinlock(&semlock), _release_spinlock(&semlock)
@@ -187,7 +187,8 @@ void init_bcache(const SuperBlock* _sblock, const BlockDevice* _device) {
 
     // TODO
     // printk("init bcache\n");
-    init_spinlock(&semlock);
+    // printk("%p %p\n", &(log.sem), &(log.outstandsem));
+    init_spinlock(&atomiclock);
     init_list_node(&head);
     init_spinlock(&lock);
     init_spinlock(&log.lock);
@@ -207,26 +208,23 @@ void init_bcache(const SuperBlock* _sblock, const BlockDevice* _device) {
 // then reserve block for op
 static void cache_begin_op(OpContext* ctx) {
     // TODO
+    static int begin;
     _acquire_spinlock(&log.lock);
+    // printk("BEGIN%d committing=%d\n", begin++, log.committing);
     while (1) {
         if (log.committing) {
-
-            _release_spinlock(&log.lock);
-            beginpost;
+            
+            // printk("Va %d\n", log.logcnt);
             log.logcnt++;
-            endpost;
+            _release_spinlock(&log.lock);
             wait_sem(&log.sem);
-            endwait;
             _acquire_spinlock(&log.lock);
 
         } else if ((int)header.num_blocks + log.mu + OP_MAX_NUM_BLOCKS > log.mx) {
-
-            _release_spinlock(&log.lock);
-            beginpost;
             log.logcnt++;
-            endpost;
+            // printk("Vb %d\n", log.logcnt);
+            _release_spinlock(&log.lock);
             wait_sem(&log.sem);
-            endwait;
             _acquire_spinlock(&log.lock);
 
         } else {
@@ -313,8 +311,10 @@ void commit() {
 // op are done.
 static void cache_end_op(OpContext* ctx) {
     // TODO
+    static int end;
     int do_commit = 0;
     _acquire_spinlock(&log.lock);
+    // printk("END%d outstanding=%d\n", end++, log.outstanding);
     log.outstanding--;
 
     log.mu -= (int)ctx->rm;
@@ -326,26 +326,22 @@ static void cache_end_op(OpContext* ctx) {
         do_commit = 1, log.committing = 1;
     } else {
 
-        beginpost;
         int cnt = log.logcnt;
         log.logcnt = 0;
-        for (int i = 0; i < cnt; i++) {
+        // if (cnt) printk("Pa %d\n", cnt);
+        for (int i = 0; i < cnt; i++)
             post_sem(&log.sem);
-        }
-        endpost;
-
-        // post_sem(&log.sem);
-
+        wait_for_sem_locked(&log.sem);
         _release_spinlock(&log.lock);
 
         // FIXME
         // printk("wait ost\n");
 
-        beginpost;
+        _acquire_spinlock(&log.lock);
         log.stcnt++;
-        endpost;
+        _release_spinlock(&log.lock);
+
         wait_sem(&log.outstandsem);
-        endwait;
 
         _acquire_spinlock(&log.lock);
     }
@@ -356,24 +352,19 @@ static void cache_end_op(OpContext* ctx) {
         // printk("com%d\n", log.stcnt);
         log.committing = 0;
 
-        beginpost;
         int cnt = log.stcnt;
         log.stcnt = 0;
-        for (int i = 0; i < cnt; i++) {
-            // printk("post ost\n");
+        for (int i = 0; i < cnt; i++)
             post_sem(&log.outstandsem);
-        }
-        endpost;
+        wait_for_sem_locked(&log.outstandsem);
 
-        // printk("post log\n");
-
-        beginpost;
         cnt = log.logcnt;
         log.logcnt = 0;
-        for (int i = 0; i < cnt; i++) {
+        // if (cnt) printk("Pb %d\n", cnt);
+        for (int i = 0; i < cnt; i++)
             post_sem(&log.sem);
-        }
-        endpost;
+        wait_for_sem_locked(&log.sem);
+        // printk("post log\n");
 
         _release_spinlock(&log.lock);
     }

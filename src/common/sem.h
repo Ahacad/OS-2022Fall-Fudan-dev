@@ -21,6 +21,7 @@ void post_sem(Semaphore*);
 bool wait_sem(Semaphore*);
 bool get_sem(Semaphore*);
 int get_all_sem(Semaphore*);
+void wait_for_sem_locked(Semaphore* x);
 
 #define SleepLock Semaphore
 #define init_sleeplock(lock) init_sem(lock, 1)

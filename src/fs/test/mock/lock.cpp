@@ -3,6 +3,7 @@
 
 #include <condition_variable>
 #include <semaphore.h>
+#include <cassert>
 namespace {
 
 struct Mutex {
@@ -79,6 +80,32 @@ void post_sem(Semaphore* x) {
     sem_post((sem_t*)x);
 }
 bool wait_sem(Semaphore* x) {
-    return sem_wait((sem_t*)x);
+    // int t = time(NULL);
+    // while (1)
+    // {
+    //     if (!sem_trywait((sem_t*)x))
+    //         break;
+    //     if (time(NULL) - t > 3)
+    //     {
+    //         printf("%p\n", x);
+    //         assert(0);
+    //     }
+    // }
+    sem_wait((sem_t*)x);
+    return true;
+}
+void wait_for_sem_locked(Semaphore* x) {
+    int t = time(NULL);
+    while (1)
+    {
+        if (sem_trywait((sem_t*)x))
+            break;
+        sem_post((sem_t*)x);
+        if (time(NULL) - t > 3)
+        {
+            printf("%p\n", x);
+            assert(0);
+        }
+    }
 }
 }
