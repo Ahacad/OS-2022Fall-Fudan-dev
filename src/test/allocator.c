@@ -18,6 +18,7 @@ static short sz[4][10000];
             ;                                                                  \
     }
 #define SYNC(i)                                                                \
+    arch_dsb_sy();                                                             \
     _increment_rc(&x);                                                         \
     while (x.count < 4 * i)                                                    \
         ;                                                                      \

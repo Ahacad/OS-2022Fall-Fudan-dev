@@ -30,7 +30,15 @@ void trap_global_handler(UserContext* context)
         } break;
         case ESR_EC_SVC64:
         {
-            syscall_entry(context);
+            PANIC();
+        } break;
+        case ESR_EC_IABORT_EL0:
+        case ESR_EC_IABORT_EL1:
+        case ESR_EC_DABORT_EL0:
+        case ESR_EC_DABORT_EL1:
+        {
+            printk("Page fault\n");
+            PANIC();
         } break;
         default:
         {

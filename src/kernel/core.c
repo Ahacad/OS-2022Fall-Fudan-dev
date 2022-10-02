@@ -8,7 +8,7 @@
 bool panic_flag;
 
 NO_RETURN void idle_entry() {
-    alloc_test();
+    // alloc_test();
     // rbtree_test();
     set_cpu_on();
     while (1) {
@@ -27,6 +27,7 @@ NO_RETURN void kernel_entry() {
     printk("hello world %d\n", (int)sizeof(struct proc));
     proc_test();
     // sd_test();
+    *(int*)NULL = 1;
     do_rest_init();
 
     while (1)

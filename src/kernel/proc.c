@@ -132,6 +132,13 @@ void init_proc(struct proc* p)
     release_spinlock(0, &proc_list_lock);
 }
 
+struct proc* create_proc()
+{
+    struct proc* p = kalloc(sizeof(struct proc));
+    init_proc(p);
+    return p;
+}
+
 define_early_init(proc_list)
 {
     init_spinlock(&proc_list_lock);

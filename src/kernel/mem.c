@@ -6,8 +6,6 @@
 #include <kernel/init.h>
 #include <driver/memlayout.h>
 
-extern char end[];
-
 static QueueNode* free_page;
 RefCount alloc_page_cnt;
 
@@ -60,7 +58,9 @@ __attribute__((weak, alias("simple_pool_free"))) void kfree(void*);
 
 define_early_init(mem)
 {
+    extern char end[];
     for (int i = (int)(((u64)&end + PAGE_SIZE - 1) / PAGE_SIZE); i < PHYSTOP / PAGE_SIZE; i++)
         kfree_page((void*)P2K(((u64)i) * PAGE_SIZE));
     // init_kmem();
+    // printk("%p %x\n", end, PHYSTOP);
 }

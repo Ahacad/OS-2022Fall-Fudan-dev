@@ -6,7 +6,7 @@
 #include <kernel/sched.h>
 #include <driver/sd.h>
 
-static bool boot_secondary_cpus = false;
+static volatile bool boot_secondary_cpus = false;
 
 NO_RETURN void idle_entry();
 
@@ -18,9 +18,9 @@ void kernel_init() {
     do_early_init();
     do_init();
 
+    arch_dsb_sy();
     boot_secondary_cpus = true;
 }
-
 
 void main()
 {

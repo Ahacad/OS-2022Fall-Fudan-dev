@@ -42,7 +42,8 @@ struct proc
     KernelContext* kcontext; // also sp_el1
 };
 
-void init_proc(struct proc*);
+// void init_proc(struct proc*);
+struct proc* create_proc();
 int start_proc(struct proc*, void(*entry)(u64), u64 arg);
 NO_RETURN void exit(int code);
 int wait(int* exitcode);

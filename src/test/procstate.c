@@ -39,8 +39,7 @@ static void proc_test_1a(u64 a)
 {
     for (int i = 0; i < 10; i++)
     {
-        struct proc* p = kalloc(sizeof(struct proc));
-        init_proc(p);
+        auto p = create_proc();
         set_parent_to_this(p);
         start_proc(p, proc_test_1b, a * 10 + i + 10);
     }
@@ -106,8 +105,7 @@ static void proc_test_1()
     int pid[10];
     for (int i = 0; i < 10; i++)
     {
-        struct proc* p = kalloc(sizeof(struct proc));
-        init_proc(p);
+        auto p = create_proc();
         set_parent_to_this(p);
         pid[i] = start_proc(p, proc_test_1a, i);
     }
@@ -124,8 +122,7 @@ static void proc_test_1()
 void proc_test()
 {
     printk("proc_test\n");
-    struct proc* p = kalloc(sizeof(struct proc));
-    init_proc(p);
+    auto p = create_proc();
     int pid = start_proc(p, proc_test_1, 0);
     int t = 0;
     while (1)

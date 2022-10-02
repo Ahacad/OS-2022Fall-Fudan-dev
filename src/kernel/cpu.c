@@ -8,8 +8,6 @@
 
 struct cpu cpus[NCPU];
 
-extern char exception_vector[];
-
 static void cpu_clock_handler() {
     auto this = thisproc();
     if (this->ucontext->elr & KSPACE_MASK) {
@@ -28,6 +26,10 @@ define_early_init(clock_handler) {
 
 void set_cpu_on() {
     ASSERT(!_arch_disable_trap());
+    // disable the lower-half address to prevent stupid errors
+    extern PTEntries invalid_pt;
+    arch_set_ttbr0(K2P(&invalid_pt));
+    extern char exception_vector[];
     arch_set_vbar(exception_vector);
     arch_reset_esr();
     init_clock();

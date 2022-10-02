@@ -31,6 +31,7 @@ void rbtree_test() {
         p[cid][i].data = -p[cid][i].key;
     }
     if (cid == 0) init_spinlock(&lock);
+    arch_dsb_sy();
     _increment_rc(&x);
     while (x.count < 4)
         ;
@@ -55,6 +56,7 @@ void rbtree_test() {
         }
         release_spinlock(0, &lock);
     }
+    arch_dsb_sy();
     _increment_rc(&x);
     while (x.count < 8)
         ;
