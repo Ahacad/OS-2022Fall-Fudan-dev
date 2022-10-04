@@ -1,9 +1,12 @@
 #include "lock_config.hpp"
 #include "map.hpp"
+#include "errno.h"
 
 #include <condition_variable>
 #include <semaphore.h>
 #include <cassert>
+#include <map>
+#include <unistd.h>
 namespace {
 
 struct Mutex {
@@ -52,60 +55,80 @@ bool holding_spinlock(struct SpinLock* lock) {
     return mtx_map[lock].locked;
 }
 
-void init_sleeplock(struct SleepLock* lock, const char* name [[maybe_unused]]) {
-    mtx_map.try_add(lock);
-}
-
-void acquire_sleeplock(struct SleepLock* lock) {
-    mtx_map[lock].lock();
-}
-
-void release_sleeplock(struct SleepLock* lock) {
-    mtx_map[lock].unlock();
-}
-
-void _fs_test_sleep(void* chan, struct SpinLock* lock) {
-    sig_map.safe_get(chan).cv->wait(mtx_map[lock].mutex);
-}
-
-void _fs_test_wakeup(void* chan) {
-    sig_map.safe_get(chan).cv->notify_all();
-}
-
 struct Semaphore;
+#define sa(x) ((uint64_t*)x)[0]
+#define sb(x) ((uint64_t*)x)[1]
 void init_sem(Semaphore* x, int val) {
-    sem_init((sem_t*)x, 0, val);
+    init_spinlock((SpinLock*)x, "");
+    sa(x) = 0;
+    sb(x) = val;
 }
-void post_sem(Semaphore* x) {
-    sem_post((sem_t*)x);
+void _lock_sem(Semaphore* x) {
+    _acquire_spinlock((SpinLock*)x);
 }
-bool wait_sem(Semaphore* x) {
-    // int t = time(NULL);
-    // while (1)
-    // {
-    //     if (!sem_trywait((sem_t*)x))
-    //         break;
-    //     if (time(NULL) - t > 3)
-    //     {
-    //         printf("%p\n", x);
-    //         assert(0);
-    //     }
-    // }
-    sem_wait((sem_t*)x);
-    return true;
+void _unlock_sem(Semaphore* x) {
+    _release_spinlock((SpinLock*)x);
 }
-void wait_for_sem_locked(Semaphore* x) {
-    int t = time(NULL);
+bool _get_sem(Semaphore* x)
+{
+    bool ret = false;
+    if (sa(x) < sb(x))
+    {
+        sa(x)++;
+        ret = true;
+    }
+    return ret;
+}
+int _query_sem(Semaphore* x)
+{
+    return sb(x) - sa(x);
+}
+void _post_sem(Semaphore* x) {
+    sb(x)++;
+}
+bool _wait_sem(Semaphore* x) {
+    auto t = sa(x)++;
+    int t0 = time(NULL);
     while (1)
     {
-        if (sem_trywait((sem_t*)x))
-            break;
-        sem_post((sem_t*)x);
-        if (time(NULL) - t > 3)
+        if (time(NULL) - t0 > 3)
         {
-            printf("%p\n", x);
-            assert(0);
+            return false;
         }
+        if (sb(x) > t)
+            break;
+        _unlock_sem(x);
+        usleep(10);
+        _lock_sem(x);
     }
+    _unlock_sem(x);
+    return true;
 }
+int get_all_sem(Semaphore* x)
+{
+    int ret = 0;
+    _lock_sem(x);
+    if (sa(x) < sb(x))
+    {
+        ret = sb(x) - sa(x);
+        sa(x) = sb(x);
+    }
+    _unlock_sem(x);
+    return ret;
+}
+int post_all_sem(Semaphore* x)
+{
+    int ret = 0;
+    _lock_sem(x);
+    if (sa(x) > sb(x))
+    {
+        ret = sa(x) - sb(x);
+        sb(x) = sa(x);
+    }
+    _unlock_sem(x);
+    return ret;
+}
+#undef sa
+#undef sb
+
 }

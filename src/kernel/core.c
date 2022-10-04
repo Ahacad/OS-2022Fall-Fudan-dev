@@ -23,8 +23,21 @@ NO_RETURN void idle_entry() {
     arch_stop_cpu();
 }
 
+void hello()
+{
+    printk(">>>\n");
+}
+
 NO_RETURN void kernel_entry() {
     printk("hello world %d\n", (int)sizeof(struct proc));
+
+    // setup_checker(0);
+    // SpinLock tst;
+    // init_spinlock(&tst);
+    // acquire_spinlock(0, &tst);
+    // checker_set_delayed_task(0, hello, 0);
+    // release_spinlock(0, &tst);
+
     proc_test();
     // sd_test();
     do_rest_init();

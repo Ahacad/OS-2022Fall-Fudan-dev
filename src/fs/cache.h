@@ -25,6 +25,7 @@ typedef struct {
     bool pinned;  // if a block is pinned, it should not be evicted from the
                   // cache.
     Semaphore sem;  // this lock protects `valid` and `data`.
+    SleepLock lock;
     bool valid;  // is the content of block loaded from disk?
     u8 data[BLOCK_SIZE];
 } Block;

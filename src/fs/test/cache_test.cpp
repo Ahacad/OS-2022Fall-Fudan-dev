@@ -22,7 +22,7 @@ static void wait_process(int pid) {
     waitpid(pid, &wstatus, 0);
     if (!WIFEXITED(wstatus)) {
         std::stringstream buf;
-        buf << "process [" << pid << "] exited abnormally";
+        buf << "process [" << pid << "] exited abnormally with code " << wstatus;
         throw Internal(buf.str());
     }
 }
@@ -715,7 +715,7 @@ void test_parallel(usize num_rounds, usize num_workers, usize delay_ms, usize lo
 
             aha.join();
             mock.dump("sd.img");
-            exit(0);
+            _exit(0);
         } else {
             wait_process(child);
             initialize_mock(log_size, num_data_blocks, "sd.img");
@@ -847,7 +847,7 @@ void test_banker() {
             fflush(stdout);
 
             mock.dump("sd.img");
-            exit(0);
+            _exit(0);
         } else {
             wait_process(child);
             initialize_mock(log_size, num_accounts, "sd.img");
@@ -897,9 +897,9 @@ int main() {
         {"alloc", basic::test_alloc},
         {"alloc_free", basic::test_alloc_free},
 
-       {"concurrent_acquire", concurrent::test_acquire},
+        {"concurrent_acquire", concurrent::test_acquire},
         {"concurrent_sync", concurrent::test_sync},
-        // {"concurrent_alloc", concurrent::test_alloc},
+        {"concurrent_alloc", concurrent::test_alloc},
 
         {"simple_crash", crash::test_simple_crash},
         {"single", [] { crash::test_parallel(1000, 1, 5, 0); }},
