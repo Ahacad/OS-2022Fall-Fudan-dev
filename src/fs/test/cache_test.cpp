@@ -593,7 +593,6 @@ void test_alloc() {
     for (auto& worker : workers) {
         worker.join();
     }
-    printf("jjj\n");
     std::sort(bno.begin(), bno.end());
     usize count = std::unique(bno.begin(), bno.end()) - bno.begin();
     assert_eq(count, 1000);

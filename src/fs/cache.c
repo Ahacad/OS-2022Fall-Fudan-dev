@@ -51,7 +51,6 @@ static void init_block(Block* block) {
     block->pinned = false;
 
     init_sleeplock(&block->lock);
-    // printf("%d\n", (void*)(block->data) - (void*)block);
     block->valid = false;
     memset(block->data, 0, sizeof(block->data));
 }
@@ -255,8 +254,7 @@ static void cache_end_op(OpContext* ctx) {
     if (log.outstanding == 0) {
         do_commit = 1, log.committing = 1;
         release_spinlock(0, &log.lock);
-    }
-    else {
+    } else {
         post_all_sem(&log.sem);
         delayed_wait_sem(0, &log.outstandingsem);
         release_spinlock(0, &log.lock);
