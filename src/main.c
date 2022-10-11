@@ -20,6 +20,7 @@ void kernel_init() {
 
     arch_dsb_sy();
     boot_secondary_cpus = true;
+    arch_dsb_sy();
 }
 
 void main()

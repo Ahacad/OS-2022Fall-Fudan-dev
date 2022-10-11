@@ -35,13 +35,11 @@ void ipc_test() {
     int msgid;
     msgid = sys_msgget(key, IPC_CREATE | IPC_EXCL);
     for (int i = 0; i < 100; i++) {
-        struct proc* p = kalloc(sizeof(struct proc));
-        init_proc(p);
+        struct proc* p = create_proc();
         start_proc(p, sender, i * 100);
     }
     for (int i = 0; i < 10; i++) {
-        struct proc* p = kalloc(sizeof(struct proc));
-        init_proc(p);
+        struct proc* p = create_proc();
         start_proc(p, receiver, i * 1000);
     }
     while (1) {

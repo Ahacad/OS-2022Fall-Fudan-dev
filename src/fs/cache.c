@@ -178,7 +178,7 @@ static void cache_begin_op(OpContext* ctx) {
         if (log.committing) {
             delayed_wait_sem(0, &log.sem);
             release_spinlock(0, &log.lock);
-        } else if (header.num_blocks + log.mu + OP_MAX_NUM_BLOCKS > log.mx) {
+        } else if (header.num_blocks + log.mu + OP_MAX_NUM_BLOCKS > (usize)log.mx) {
             delayed_wait_sem(0, &log.sem);
             release_spinlock(0, &log.lock);
         } else {
@@ -197,7 +197,7 @@ static void cache_sync(OpContext* ctx, Block* block) {
     if (ctx) {
         // TODO
         _acquire_spinlock(&log.lock);
-        if (header.num_blocks >= log.mx) {
+        if (header.num_blocks >= (usize)log.mx) {
             PANIC();
         }
         if (log.outstanding < 1)
@@ -273,7 +273,7 @@ static void cache_end_op(OpContext* ctx) {
 
 // see `cache.h`.
 // hint: you can use `cache_acquire`/`cache_sync` to read/write blocks.
-usize BBLOCK(usize b, SuperBlock* sb) {
+usize BBLOCK(usize b, const SuperBlock* sb) {
     return b / BIT_PER_BLOCK + sb->bitmap_start;
 }
 void bzero(OpContext* ctx, u32 block_no) {

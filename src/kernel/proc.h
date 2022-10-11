@@ -4,6 +4,7 @@
 #include <common/list.h>
 #include <common/sem.h>
 #include <kernel/schinfo.h>
+#include <kernel/pt.h>
 
 enum procstate { UNUSED, RUNNABLE, RUNNING, SLEEPING, ZOMBIE };
 
@@ -37,6 +38,7 @@ struct proc
     ListNode ptnode;
     struct proc* parent;
     struct schinfo schinfo;
+    struct pgdir pgdir;
     void* kstack;
     UserContext* ucontext;
     KernelContext* kcontext; // also sp_el1
@@ -47,3 +49,4 @@ struct proc* create_proc();
 int start_proc(struct proc*, void(*entry)(u64), u64 arg);
 NO_RETURN void exit(int code);
 int wait(int* exitcode);
+int kill(int pid);

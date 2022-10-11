@@ -5,13 +5,28 @@
 #include <kernel/printk.h>
 #include <aarch64/intrinsic.h>
 #include <kernel/cpu.h>
-#include <driver/clock.h>
 #include <test/test.h>
 
 extern bool panic_flag;
 
 static SpinLock sched_lock;
 static ListNode sched_queue;
+
+static struct timer sched_timer[NCPU];
+
+static void sched_timer_handler(struct timer* t)
+{
+    ASSERT(t == &sched_timer[cpuid()] && t->triggered);
+    yield();
+}
+
+static void reset_sched_timer(int ms)
+{
+    if (!sched_timer[cpuid()].triggered)
+        cancel_cpu_timer(&sched_timer[cpuid()]);
+    sched_timer[cpuid()].elapse = ms;
+    set_cpu_timer(&sched_timer[cpuid()]);
+}
 
 extern void swtch(KernelContext* new_ctx, KernelContext** old_ctx);
 
@@ -36,6 +51,8 @@ define_init(sched)
         p->idle = true;
         cpus[i].sched.proc = cpus[i].sched.idle = p;
         cpus[i].sched.curr = &sched_queue;
+        sched_timer[i].handler = sched_timer_handler;
+        sched_timer[i].triggered = true;
     }
 }
 
@@ -67,7 +84,7 @@ bool activate_proc(struct proc* p)
 {
     bool ret = false;
     _acquire_sched_lock();
-    ASSERT(p->state != ZOMBIE);
+    ASSERT(!p->idle);
     if (p->state == UNUSED || p->state == SLEEPING)
     {
         p->state = RUNNABLE;
@@ -121,20 +138,18 @@ static struct proc* pick_next()
 static void update_this_proc(struct proc* p)
 {
     cpus[cpuid()].sched.proc = p;
-    if (p->idle)
-    {
-        reset_clock(1); // give more wakeups to wfi()...
-    }
-    else
-    {
-        reset_clock(RR_TIME);
-    }
+    reset_sched_timer(10);
 }
 
 static void simple_sched(enum procstate new_state)
 {
     auto this = thisproc();
     ASSERT(this->state == RUNNING);
+    if (this->killed && new_state != ZOMBIE)
+    {
+        _release_sched_lock();
+        return;
+    }
     update_this_state(new_state);
     auto next = pick_next();
     // printk("[%d %d->%d]\n", cpuid(), this->pid, next->pid);

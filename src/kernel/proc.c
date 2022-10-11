@@ -27,6 +27,37 @@ void set_parent_to_this(struct proc* proc)
     release_spinlock(0, &proc_list_lock);
 }
 
+static struct proc* _find_child(struct proc* proc, int pid)
+{
+    _for_in_list(node, &proc->children)
+    {
+        if (node == &proc->children)
+            continue;
+        auto p = container_of(node, struct proc, ptnode);
+        if (p->pid == pid)
+            return p;
+    }
+    return NULL;
+}
+
+int kill(int pid)
+{
+    setup_checker(0);
+    acquire_spinlock(0, &proc_list_lock);
+    auto p = _find_child(&root_proc, pid);
+    if (!p)
+    {
+        release_spinlock(0, &proc_list_lock);
+        return -1;
+    }
+    ASSERT(p->state != UNUSED);
+    p->killed = true;
+    arch_dsb_sy();
+    activate_proc(p);
+    release_spinlock(0, &proc_list_lock);
+    return 0;
+}
+
 NO_RETURN void exit(int code)
 {
     auto this = thisproc();
@@ -123,6 +154,7 @@ void init_proc(struct proc* p)
     p->kcontext = (KernelContext*)((u64)p->kstack + PAGE_SIZE - 16 - sizeof(KernelContext) - sizeof(UserContext));
     p->ucontext = (UserContext*)((u64)p->kstack + PAGE_SIZE - 16 - sizeof(UserContext));
     init_sem(&p->childexit, 0);
+    init_pgdir(&p->pgdir);
     init_list_node(&p->children);
     init_list_node(&p->ptnode);
     p->parent = NULL;
