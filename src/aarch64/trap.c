@@ -49,7 +49,7 @@ void trap_global_handler(UserContext* context)
     }
 
     // stop killed process when returning to user space
-    if (thisproc()->killed && (context->elr & KSPACE_MASK))
+    if (thisproc()->killed && !(context->elr & KSPACE_MASK))
         exit(-1);
 }
 

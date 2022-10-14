@@ -41,8 +41,8 @@ static void _free_pt(PTEntriesPtr pt, int lv)
         {
             if (lv < 3)
                 _free_pt((PTEntriesPtr)P2K(PTE_ADDRESS(pt[i])), lv + 1);
-            else
-                kfree_page((void*)P2K(PTE_ADDRESS(pt[i])));
+            // else
+            //     kfree_page((void*)P2K(PTE_ADDRESS(pt[i])));
         }
     }
     kfree_page(pt);

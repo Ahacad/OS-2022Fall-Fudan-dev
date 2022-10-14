@@ -11,15 +11,16 @@ PTEntriesPtr get_pte(struct pgdir* pgdir, u64 va, bool alloc);
 
 void vm_test() {
     printk("vm_test\n");
+    static void* p[100000];
     extern RefCount alloc_page_cnt;
     struct pgdir pg;
     int p0 = alloc_page_cnt.count;
     init_pgdir(&pg);
     for (u64 i = 0; i < 100000; i++)
     {
-        auto p = kalloc_page();
-        *get_pte(&pg, i << 12, true) = K2P(p) | PTE_USER_DATA;
-        *(int*)p = i;
+        p[i] = kalloc_page();
+        *get_pte(&pg, i << 12, true) = K2P(p[i]) | PTE_USER_DATA;
+        *(int*)p[i] = i;
     }
     attach_pgdir(&pg);
     for (u64 i = 0; i < 100000; i++)
@@ -29,6 +30,8 @@ void vm_test() {
     }
     free_pgdir(&pg);
     attach_pgdir(&pg);
+    for (u64 i = 0; i < 100000; i++)
+        kfree_page(p[i]);
     ASSERT(alloc_page_cnt.count == p0);
     printk("vm_test PASS\n");
 }
@@ -41,6 +44,7 @@ static Semaphore myrepot_done;
 define_syscall(myreport, u64 id)
 {
     static bool stop;
+    ASSERT(id < 22);
     if (stop)
         return 0;
     proc_cnt[id]++;
@@ -66,9 +70,9 @@ void user_proc_test()
         {
             *get_pte(&p->pgdir, 0x400000 + q - (u64)loop_start, true) = K2P(q) | PTE_USER_DATA;
         }
+        ASSERT(p->pgdir.pt);
         p->ucontext->x0 = i;
         p->ucontext->elr = 0x400000;
-        ASSERT(p->pgdir.pt);
         p->ucontext->ttbr0 = K2P(p->pgdir.pt);
         p->ucontext->spsr = 0;
         pids[i] = start_proc(p, trap_return, 0);

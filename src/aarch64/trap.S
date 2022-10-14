@@ -4,6 +4,7 @@
 /* `exception_vector.S` send all traps here. */
 .global trap_entry
 trap_entry:
+/*
     pushp(x16, x17)
     pushp(x14, x15)
     pushp(x12, x13)
@@ -22,6 +23,13 @@ trap_entry:
     mrs x1, tpidr_el0
     pushp(x0, x1)
     mov x0, sp
+*/
+    mrs lr, elr_el1
+    pushp(x0, x1)
+test:
+    pushp(fp, lr)
+    mov x0, #0
+    mov fp, sp
     bl trap_global_handler
 
 .global trap_return

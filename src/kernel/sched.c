@@ -80,6 +80,15 @@ bool is_zombie(struct proc* p)
     return r;
 }
 
+bool is_unused(struct proc* p)
+{
+    bool r;
+    _acquire_sched_lock();
+    r = p->state == ZOMBIE;
+    _release_sched_lock();
+    return r;
+}
+
 bool activate_proc(struct proc* p)
 {
     bool ret = false;

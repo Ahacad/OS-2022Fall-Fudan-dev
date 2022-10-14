@@ -34,7 +34,7 @@ static struct proc* _find_child(struct proc* proc, int pid)
         if (node == &proc->children)
             continue;
         auto p = container_of(node, struct proc, ptnode);
-        if (p->pid == pid)
+        if (p->pid == pid && !is_unused(p))
             return p;
     }
     return NULL;
@@ -64,7 +64,7 @@ NO_RETURN void exit(int code)
     ASSERT(this != &root_proc && !this->idle);
     setup_checker(0);
     // cleanup resources
-    // TODO
+    free_pgdir(&this->pgdir);
     this->exitcode = code;
     // transfer children to the root_proc
     acquire_spinlock(0, &proc_list_lock);
