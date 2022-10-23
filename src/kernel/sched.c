@@ -154,7 +154,7 @@ static void simple_sched(enum procstate new_state)
 {
     auto this = thisproc();
     ASSERT(this->state == RUNNING);
-    if (this->killed && new_state != ZOMBIE)
+    if (this->killed && new_state != ZOMBIE && new_state != DEEPSLEEPING)
     {
         _release_sched_lock();
         return;
