@@ -88,7 +88,7 @@ static Block* cache_acquire(usize block_no) {
         Block* b = container_of(p, Block, node);
         _release_spinlock(&lock);
         setup_checker(0);
-        acquire_sleeplock(0, &b->lock);
+        unalertable_acquire_sleeplock(0, &b->lock);
         checker_end_ctx(0);
         return b;
     }
@@ -116,7 +116,7 @@ static Block* cache_acquire(usize block_no) {
     b->acquired = 1;
     _release_spinlock(&lock);
     setup_checker(0);
-    acquire_sleeplock(0, &b->lock);
+    unalertable_acquire_sleeplock(0, &b->lock);
     checker_end_ctx(0);
     return b;
 }
@@ -175,11 +175,13 @@ static void cache_begin_op(OpContext* ctx) {
         setup_checker(0);
         acquire_spinlock(0, &log.lock);
         if (log.committing) {
-            delayed_wait_sem(0, &log.sem);
+            lock_sem(0, &log.sem);
             release_spinlock(0, &log.lock);
+            prelocked_unalertable_wait_sem(0, &log.sem);
         } else if (header.num_blocks + log.mu + OP_MAX_NUM_BLOCKS > (usize)log.mx) {
-            delayed_wait_sem(0, &log.sem);
+            lock_sem(0, &log.sem);
             release_spinlock(0, &log.lock);
+            prelocked_unalertable_wait_sem(0, &log.sem);
         } else {
             log.outstanding++;
             log.mu += OP_MAX_NUM_BLOCKS;
@@ -256,8 +258,9 @@ static void cache_end_op(OpContext* ctx) {
         release_spinlock(0, &log.lock);
     } else {
         post_all_sem(&log.sem);
-        delayed_wait_sem(0, &log.outstandingsem);
+        lock_sem(0, &log.outstandingsem);
         release_spinlock(0, &log.lock);
+        prelocked_unalertable_wait_sem(0, &log.outstandingsem);
     }
     if (do_commit) {
         commit();

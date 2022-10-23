@@ -53,7 +53,7 @@ int kill(int pid)
     ASSERT(p->state != UNUSED);
     p->killed = true;
     arch_dsb_sy();
-    activate_proc(p);
+    alert_proc(p);
     release_spinlock(0, &proc_list_lock);
     return 0;
 }

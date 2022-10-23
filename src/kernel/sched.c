@@ -89,12 +89,12 @@ bool is_unused(struct proc* p)
     return r;
 }
 
-bool activate_proc(struct proc* p)
+bool _activate_proc(struct proc* p, bool onalert)
 {
     bool ret = false;
     _acquire_sched_lock();
     ASSERT(!p->idle);
-    if (p->state == UNUSED || p->state == SLEEPING)
+    if (p->state == UNUSED || p->state == SLEEPING || (p->state == DEEPSLEEPING && !onalert))
     {
         p->state = RUNNABLE;
         _insert_into_list(&sched_queue, &p->schinfo.sqnode);
@@ -110,7 +110,7 @@ static void update_this_state(enum procstate new_state)
     {
     case RUNNABLE:
         break;
-    case SLEEPING: case ZOMBIE:
+    case SLEEPING: case ZOMBIE: case DEEPSLEEPING:
         cpus[cpuid()].sched.curr = cpus[cpuid()].sched.curr->next;
         _detach_from_list(&thisproc()->schinfo.sqnode);
         break;

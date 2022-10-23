@@ -215,12 +215,28 @@ void sd_intr() {
  * 2.if no buf in queue before,send request now
  * 3.'loop' until buf flag is modified
  *
- * You may use some buflist functions, arch_dsb_sy(), sd_start(), wait_sem()
+ * You may use some buflist functions, arch_dsb_sy(), sd_start(), unalertable_wait_sem()
  * to complete this function.
  *  TODO: Lab7 driver.
  */
 
 void sdrw(buf* b) {
+
+    // sd_start(b);
+    // int is_write = (b->flags & B_DIRTY);
+    // if (is_write)
+    //     sdWaitForInterrupt(INT_DATA_DONE);
+    // else
+    //     sdWaitForInterrupt(INT_READ_RDY);
+    // if (!is_write) {
+    //     int done = 0;
+    //     u32* ip = (u32*)b->data;
+    //     while (done < 128)
+    //         ip[done++] = get_EMMC_DATA();
+    //     sdWaitForInterrupt(INT_DATA_DONE);
+    // }
+    // b->flags = B_VALID;
+    // return;
 
     queue_lock(&sdque);
     bool idle = queue_empty(&sdque);
@@ -234,7 +250,7 @@ void sdrw(buf* b) {
             break;
         // sleep(b, &qlock);
         queue_unlock(&sdque);
-        wait_sem(&b->sl);
+        unalertable_wait_sem(&b->sl);
         queue_lock(&sdque);
     }
     queue_unlock(&sdque);
