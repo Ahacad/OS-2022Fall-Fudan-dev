@@ -35,9 +35,22 @@ struct Signal {
 
 Map<void*, Mutex> mtx_map;
 Map<void*, Signal> sig_map;
-thread_local int spinlock_holding = 0;
 
-}  // namespace
+thread_local int holding = 0;
+static struct Blocker {
+    static constexpr bool Enabled = true;
+    sem_t sem;
+    Blocker() {
+        sem_init(&sem, 0, 3);
+    }
+    void p() {
+        if constexpr (Enabled) sem_wait(&sem);
+    }
+    void v() {
+        if constexpr (Enabled) sem_post(&sem);
+    }
+} blocker;
+}
 
 extern "C" {
 
@@ -46,13 +59,15 @@ void init_spinlock(struct SpinLock* lock, const char* name [[maybe_unused]]) {
 }
 
 void _acquire_spinlock(struct SpinLock* lock) {
+    blocker.p();
     mtx_map[lock].lock();
-    spinlock_holding++;
+    holding++;
+    blocker.v();
 }
 
 void _release_spinlock(struct SpinLock* lock) {
     mtx_map[lock].unlock();
-    spinlock_holding--;
+    holding--;
 }
 
 bool holding_spinlock(struct SpinLock* lock) {
@@ -91,12 +106,12 @@ void _post_sem(Semaphore* x) {
     sb(x)++;
 }
 bool _wait_sem(Semaphore* x, bool alertable [[maybe_unused]]) {
-    assert(spinlock_holding == 0);
+    assert(holding == 1);
     auto t = sa(x)++;
     int t0 = time(NULL);
     while (1)
     {
-        if (time(NULL) - t0 > 3)
+        if (time(NULL) - t0 > 10)
         {
             return false;
         }
