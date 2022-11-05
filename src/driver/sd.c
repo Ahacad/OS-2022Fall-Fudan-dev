@@ -177,6 +177,11 @@ void sd_intr() {
      *
      * TODO: Lab7 driver.
      */
+    // if (sdque.lk.locked)
+    // {
+    //     printk("hhh %x\n", *EMMC_INTERRUPT);
+    //     return;
+    // }
     queue_lock(&sdque);
     if (!queue_empty(&sdque)) {
         u32 intr = get_and_clear_EMMC_INTERRUPT();
@@ -215,7 +220,7 @@ void sd_intr() {
  * 2.if no buf in queue before,send request now
  * 3.'loop' until buf flag is modified
  *
- * You may use some buflist functions, arch_dsb_sy(), sd_start(), unalertable_wait_sem()
+ * You may use some buflist functions, arch_dsb_sy(), sd_start(), wait_sem()
  * to complete this function.
  *  TODO: Lab7 driver.
  */

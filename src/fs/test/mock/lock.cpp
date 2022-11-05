@@ -35,20 +35,24 @@ struct Signal {
 
 Map<void*, Mutex> mtx_map;
 Map<void*, Signal> sig_map;
+thread_local int spinlock_holding = 0;
 
 }  // namespace
 
 extern "C" {
+
 void init_spinlock(struct SpinLock* lock, const char* name [[maybe_unused]]) {
     mtx_map.try_add(lock);
 }
 
 void _acquire_spinlock(struct SpinLock* lock) {
     mtx_map[lock].lock();
+    spinlock_holding++;
 }
 
 void _release_spinlock(struct SpinLock* lock) {
     mtx_map[lock].unlock();
+    spinlock_holding--;
 }
 
 bool holding_spinlock(struct SpinLock* lock) {
@@ -87,6 +91,7 @@ void _post_sem(Semaphore* x) {
     sb(x)++;
 }
 bool _wait_sem(Semaphore* x, bool alertable [[maybe_unused]]) {
+    assert(spinlock_holding == 0);
     auto t = sa(x)++;
     int t0 = time(NULL);
     while (1)
