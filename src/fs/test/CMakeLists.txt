@@ -22,7 +22,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${compiler_flags}")
 file(GLOB mock_sources CONFIGURE_DEPENDS "mock/*.cpp")
 add_library(mock STATIC ${mock_sources})
 
-file(GLOB fs_sources CONFIGURE_DEPENDS "../*.c")
+file(GLOB fs_sources CONFIGURE_DEPENDS "../cache.c")
 add_library(fs STATIC ${fs_sources} "instrument.c")
 target_compile_options(fs PUBLIC "-fno-builtin" "-ffreestanding")
 
