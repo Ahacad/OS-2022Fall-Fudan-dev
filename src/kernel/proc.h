@@ -32,6 +32,7 @@ struct proc
     bool killed;
     bool idle;
     int pid;
+    int localpid;
     int exitcode;
     enum procstate state; // ruled by scheduler
     Semaphore childexit;

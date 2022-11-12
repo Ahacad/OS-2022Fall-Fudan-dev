@@ -2,6 +2,7 @@
 #include <kernel/init.h>
 #include <kernel/mem.h>
 #include <kernel/sched.h>
+#include <kernel/container.h>
 #include <common/list.h>
 #include <common/string.h>
 #include <kernel/printk.h>
@@ -142,6 +143,7 @@ int start_proc(struct proc* p, void(*entry)(u64), u64 arg)
     p->kcontext->x0 = (u64)entry;
     p->kcontext->x1 = (u64)arg;
     int pid = p->pid;
+    p->localpid = ++(p->container->max_pid);
     activate_proc(p);
     return pid;
 }
