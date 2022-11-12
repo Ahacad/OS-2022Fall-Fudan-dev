@@ -8,6 +8,7 @@
 
 static SpinLock proc_list_lock;
 struct proc root_proc;
+extern struct container root_container;
 static int max_pid;
 
 void kernel_entry();
@@ -158,7 +159,8 @@ void init_proc(struct proc* p)
     init_list_node(&p->children);
     init_list_node(&p->ptnode);
     p->parent = NULL;
-    init_schinfo(&p->schinfo);
+    p->container = &root_container;
+    init_schinfo(&p->schinfo, false);
     acquire_spinlock(0, &proc_list_lock);
     p->pid = ++max_pid;
     release_spinlock(0, &proc_list_lock);
@@ -180,5 +182,6 @@ define_init(root_proc)
 {
     init_proc(&root_proc);
     root_proc.parent = &root_proc;
+    root_proc.container = &root_container;
     start_proc(&root_proc, kernel_entry, 123456);
 }

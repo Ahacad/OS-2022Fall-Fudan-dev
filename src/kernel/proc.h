@@ -5,6 +5,7 @@
 #include <common/sem.h>
 #include <kernel/schinfo.h>
 #include <kernel/pt.h>
+#include <kernel/container.h>
 
 enum procstate { UNUSED, RUNNABLE, RUNNING, SLEEPING, DEEPSLEEPING, ZOMBIE };
 
@@ -39,6 +40,7 @@ struct proc
     struct proc* parent;
     struct schinfo schinfo;
     struct pgdir pgdir;
+    struct container* container;
     void* kstack;
     UserContext* ucontext;
     KernelContext* kcontext; // also sp_el1

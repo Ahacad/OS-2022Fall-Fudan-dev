@@ -8,12 +8,17 @@ struct sched
 {
     struct proc* proc;
     struct proc* idle;
-    
-    ListNode* curr;
 };
 
 // embeded data for procs
 struct schinfo
 {
+    bool group;
     ListNode sqnode;
+};
+
+// embedded data for containers
+struct schqueue
+{
+    ListNode sqhead;
 };

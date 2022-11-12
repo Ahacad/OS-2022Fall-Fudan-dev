@@ -3,6 +3,7 @@
 #include <kernel/init.h>
 #include <kernel/mem.h>
 #include <kernel/printk.h>
+#include <kernel/container.h>
 #include <aarch64/intrinsic.h>
 #include <kernel/cpu.h>
 #include <test/test.h>
@@ -10,7 +11,7 @@
 extern bool panic_flag;
 
 static SpinLock sched_lock;
-static ListNode sched_queue;
+extern struct container root_container;
 
 static struct timer sched_timer[NCPU];
 
@@ -35,10 +36,9 @@ struct proc* thisproc()
     return cpus[cpuid()].sched.proc;
 }
 
-define_early_init(squeue)
+define_early_init(slock)
 {
     init_spinlock(&sched_lock);
-    init_list_node(&sched_queue);
 }
 
 define_init(sched)
@@ -50,15 +50,20 @@ define_init(sched)
         p->state = RUNNING;
         p->idle = true;
         cpus[i].sched.proc = cpus[i].sched.idle = p;
-        cpus[i].sched.curr = &sched_queue;
         sched_timer[i].handler = sched_timer_handler;
         sched_timer[i].triggered = true;
     }
 }
 
-void init_schinfo(struct schinfo* p)
+void init_schinfo(struct schinfo* p, bool group)
 {
+    p->group = group;
     init_list_node(&p->sqnode);
+}
+
+void init_schqueue(struct schqueue* q)
+{
+    init_list_node(&q->sqhead);
 }
 
 void _acquire_sched_lock()
@@ -97,7 +102,7 @@ bool _activate_proc(struct proc* p, bool onalert)
     if (p->state == UNUSED || p->state == SLEEPING || (p->state == DEEPSLEEPING && !onalert))
     {
         p->state = RUNNABLE;
-        _insert_into_list(&sched_queue, &p->schinfo.sqnode);
+        _insert_into_list(&p->container->schqueue.sqhead, &p->schinfo.sqnode);
         ret = true;
     }
     _release_sched_lock();
@@ -106,13 +111,14 @@ bool _activate_proc(struct proc* p, bool onalert)
 
 static void update_this_state(enum procstate new_state)
 {
+    auto p = thisproc();
     switch (new_state)
     {
     case RUNNABLE:
+        if (!p->idle)
+            _insert_into_list(p->container->schqueue.sqhead.prev, &p->schinfo.sqnode);
         break;
     case SLEEPING: case ZOMBIE: case DEEPSLEEPING:
-        cpus[cpuid()].sched.curr = cpus[cpuid()].sched.curr->next;
-        _detach_from_list(&thisproc()->schinfo.sqnode);
         break;
     default:
         PANIC();
@@ -120,27 +126,38 @@ static void update_this_state(enum procstate new_state)
     thisproc()->state = new_state;
 }
 
-static struct proc* pick_next()
+static struct proc* _pick_in_queue(struct schqueue* q)
 {
-    auto curr = cpus[cpuid()].sched.curr;
-    if (panic_flag)
-        return cpus[cpuid()].sched.idle;
-    _for_in_list(p, curr)
+    _for_in_list(p, &q->sqhead)
     {
-        if (p == &sched_queue)
+        if (p == &q->sqhead)
             continue;
-        auto proc = container_of(p, struct proc, schinfo.sqnode);
-        if (proc->state == RUNNING)
-            continue;
-        if (proc->state == RUNNABLE)
+        auto info = container_of(p, struct schinfo, sqnode);
+        if (info->group)
         {
-            cpus[cpuid()].sched.curr = &proc->schinfo.sqnode;
-            return proc;
+            auto proc = _pick_in_queue(&container_of(info, struct container, schinfo)->schqueue);
+            if (proc)
+                return proc;
         }
         else
-            PANIC(); // WTF?
+        {
+            return container_of(info, struct proc, schinfo);
+        }
     }
-    cpus[cpuid()].sched.curr = &sched_queue;
+    return NULL;
+}
+
+static struct proc* pick_next()
+{
+    if (panic_flag)
+        return cpus[cpuid()].sched.idle;
+    auto p = _pick_in_queue(&root_container.schqueue);
+    if (p)
+    {
+        ASSERT(p->state == RUNNABLE);
+        _detach_from_list(&p->schinfo.sqnode);
+        return p;
+    }
     return cpus[cpuid()].sched.idle;
 }
 
